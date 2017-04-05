@@ -307,8 +307,64 @@ end
 
 $coordinates = []
 
+class Path # used to find the possible moves of a rook, bishop, or queen
+	attr_accessor :x_step, :y_step, :piece, :name, :tiles, :x_ori, :y_ori
+	def initialize(piece, name)
+		@name = name
+		@x_ori = self.set_x_orientation # in which direction, if any, do we move
+		@y_ori = self.set_y_orientation # along the x or y axis during each step?
+		@name = name
+		@piece = piece
+		@tiles = []
+		@x_step = @piece.tile.coordinates.x_axis # what is the x- or y-coordinate
+		@y_step = @piece.tile.coordinates.y_axis # of our current step?
+		self.fill_path
+	end
+	def set_y_orientation
+		if (self.name.upcase == "N") || (self.name.chop.upcase == "N")
+			return 1
+		elsif (self.name.upcase =="S") || (self.name.chop.upcase == "S")
+			return -1
+		else
+			return 0
+		end
+	end
+	def set_x_orientation
+		if (self.name.upcase == "E") || (self.name.reverse.chop.upcase == "E")
+			return 1
+		elsif (self.name.upcase == "W") || (self.name.reverse.chop.upcase == "W")
+			return -1
+		else
+			return 0
+		end
+	end
+	def take_step # in order to find our path, we keep taking steps in a given
+		self.x_step += self.x_ori # direction (up, down, left, right, diagonal)
+		self.y_step += self.y_ori # until we run into another piece or reach the
+		tiles = self.piece.simlevel.tiles
+		step = tiles.find {|tile| tile.coordinates.x_axis == self.x_step &&
+			tile.coordinates.y_axis == self.y_step
+		}
+	end
+	def fill_path
+		loop do
+			step = self.take_step # end of the board
+			if step == nil # if we have reached the end of the board
+				break # we cannot take any more steps
+			elsif step.occupied_piece == nil # if the tile is unoccupied it is added
+				self.tiles.push(step) # to the path and we can take another step
+			elsif step.occupied_piece.team == self.piece.team # if the tile is occupied
+				break # by a friendly piece then we cannot take any more steps
+			else # the only remaining possibility is that the tile is occupied by an
+				self.tiles.push(step) # enemy piece, which means that we can make this
+				break # step but cannot move beyond it
+			end
+		end
+	end
+end
+
 class Piece
-	attr_accessor :rank, :coordinates, :title, :name, :serial, :depth, :game, :simlevel, :moved, :color
+	attr_accessor :rank, :coordinates, :title, :name, :serial, :depth, :game, :moved, :color
 	def initialize(rank, color, tilename, serial, game, depth = 0)
 		@depth = depth
 		@rank = rank
@@ -333,104 +389,19 @@ class Piece
 	def tile
 		return (self.simlevel.tiles.find {|tile| tile.coordinates == self.coordinates})
 	end
-	def x_path # all the possible moves of a bishop
-		nw_path = []
-		ne_path = []
-		se_path = []
-		sw_path = []
-		compass = [[-1, 1, nw_path], [1, 1, ne_path], [1, -1, se_path], [-1, -1, sw_path]]
-		direction = 0
-		x_coordinate = self.coordinates.x_axis
-		y_coordinate = self.coordinates.y_axis
-		path = nw_path
-		path_end = false
-		loop do
-			x_coordinate += compass[direction][0]
-			y_coordinate += compass[direction][1]
-			step = self.simlevel.tiles.find {|tile| ((tile.coordinates.x_axis == x_coordinate) && (tile.coordinates.y_axis == y_coordinate))}
-			if step == nil || (path_end == true)
-				direction += 1
-				break if direction > 3
-				path = compass[direction][2]
-				x_coordinate = self.coordinates.x_axis
-				y_coordinate = self.coordinates.y_axis
-				path_end == false
-			elsif step.occupied_piece == nil
-				path.push(step)
-			elsif step.occupied_piece.team == self.team
-				direction += 1
-				break if direction > 3
-				path = compass[direction][2]
-				x_coordinate = self.coordinates.x_axis
-				y_coordinate = self.coordinates.y_axis
-				path_end == false
-			else
-				path_end = true
-				path.push(step)
-			end
-		end
-		return (nw_path + ne_path + se_path + sw_path)
-	end
 	def plus_path #all the possible moves of a rook
-		north_path = []
-		east_path = []
-		south_path = []
-		west_path = []
-		compass = [[0, 1, north_path], [1, 0, east_path], [0, -1, south_path], [-1, -1, west_path]]
-		# we need to check each direction: north, south, east, and west
-		# for each entry, the number at [0] will be added to the x_coordinate each turn
-		# similarly, the number at [1] will be added to the y_coordinate each turn
-		direction = 0
-		x_coordinate = self.coordinates.x_axis
-		y_coordinate = self.coordinates.y_axis
-		path = north_path
-		path_end = false # this is used to indicated that we have reached an enemy
-		# piece, and cannot move any further
-		loop do
-			# we proceed stepwise, evaluating whether the step is a valid destination
-			# when we reach an invalid destination, we repeat in a different direction
-			# until we've checked all four directions
-			x_coordinate += compass[direction][0]
-			y_coordinate += compass[direction][1] #this is where we take a step
-			# the next line retrieves the tile we have just moved to
-			step = self.simlevel.tiles.find {|tile| ((tile.coordinates.x_axis == x_coordinate) && (tile.coordinates.y_axis == y_coordinate))}
-			if step == nil || path_end == true
-				# if we can't find the tile we stepped on in the list of tiles, that
-				# means that we have stepped off the board
-				direction += 1 # we move on to the next direction
-				break if direction > 3 # unless we have already checked all of them
-				path = compass[direction][2]
-				x_coordinate = self.coordinates.x_axis
-				y_coordinate = self.coordinates.y_axis
-				# we need move back to the current location of the moving piece before
-				# checking a new direction
-				path_end == false # we also have to reset this
-			elsif step.occupied_piece == nil
-				# if we have just stepped onto an empty tile, we add it to the list of
-				# valid moves in the direction we are currently moving
-				path.push(step)
-			elsif step.occupied_piece.team == self.team
-				# we cannot move onto a tile occupied by a friendly piece, so we need to
-				# move on to the next direction
-				direction += 1
-				break if direction > 3
-				path = compass[direction][2]
-				x_coordinate = self.coordinates.x_axis
-				y_coordinate = self.coordinates.y_axis
-				path_end == false
-			else # the only remaining possibility is that we have stepped onto a tile
-				# that is occupied by an enemy piece. This means that while the current
-				# step represents a valid destination, we have reached the end of the path
-				path_end = true
-				# setting path_end to true will, on the next iteration of the loop,
-				# trigger the conditional that moves on to the next direction
-				path.push(step)
-			end
-		end
-		return (north_path + east_path + south_path + west_path)
+		north_path = Path.new(self, "N")
+		east_path = Path.new(self, "E")
+		south_path = Path.new(self, "S")
+		west_path = Path.new(self, "W")
+		north_path.tiles + east_path.tiles + south_path.tiles + west_path.tiles
 	end
-	def asterisk_path # these are the possible moves of a queen
-		return (self.x_path + self.plus_path)
+	def x_path # all the possible moves of a bishop
+		nw_path = Path.new(self, "NW")
+		ne_path = Path.new(self, "NE")
+		se_path = Path.new(self, "SE")
+		sw_path = Path.new(self, "SW")
+		nw_path.tiles + ne_path.tiles + se_path.tiles + sw_path.tiles
 	end
 end
 
@@ -493,15 +464,10 @@ class Rook < Piece
 		end
 	end
 	def criteria(boardstate)
-		plus_moves = self.plus_path
-		boardstate.movelist.each do |move|
-			if ((move.piece == self) && (plus_moves.include?(move.destination) == false))
-				boardstate.movelist.delete(move)
-			end
-		end
 		if ((self.depth > (-2)) && (self.can_castle == true)) #the former condition is in place to prevent infinite loops where check detect simulates castling as a possible move, which in turn must run check detect
 			boardstate.movelist.push(Move.new(self.game, self.tile, "castle"))
 		end
+		return self.plus_path
 	end
 	def castle_destination #where will this piece end up if it castles?
 		if self.coordinates.name == "A1" #note: this will probably crash if self.can_castle == false
@@ -555,22 +521,15 @@ class Knight < Piece
 		return simpiece
 	end
 	def criteria(boardstate)
-		piece_moves = boardstate.movelist.select {|move| move.piece == self}
-		piece_moves.each do |move|
-			x_difference = (move.destination.coordinates.x_axis - move.departure.coordinates.x_axis).abs
-			y_difference = (move.destination.coordinates.y_axis - move.departure.coordinates.y_axis).abs
+		destinations = boardstate.tiles.dup
+		destinations.each do |dest|
+			x_difference = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
+			y_difference = (dest.coordinates.y_axis - self.tile.coordinates.y_axis).abs
 			unless (((x_difference - y_difference).abs == 1) && (x_difference + y_difference == 3))
-				boardstate.movelist.delete(move) #this used to be piece_moves.delete(move)
-				#but for some reason changing this and commenting out the section below
-				#prevented the knights from deleting moves that weren't theirs
-				#even though afaict there shouldn't have been any change in function
+				destinations.delete(dest)
 			end
 		end
-#		boardstate.movelist.each do |move|
-#			if ((move.piece == self) && (piece_moves.include?(move) == false)
-#				boardstate.movelist.delete(move))
-#			end
-#		end
+		return destinations
 	end
 end
 
@@ -584,11 +543,7 @@ class Bishop < Piece
 		return simpiece
 	end
 	def criteria(boardstate)
-		boardstate.movelist.each do |move|
-			if ((move.piece == self) && (self.x_path.include?(move.destination) == false))
-				boardstate.movelist.delete(move)
-			end
-		end
+		return self.x_path
 	end
 end
 
@@ -612,17 +567,15 @@ class King < Piece
 		return king_simulation
 	end
 	def criteria(boardstate)
-		piece_moves = boardstate.movelist.select {|move| move.piece == self}
-		piece_moves.each do |move|
-			unless (((move.destination.coordinates.x_axis - move.departure.coordinates.x_axis).abs == (1 || 0)) && ((move.destination.coordinates.y_axis - move.departure.coordinates.y_axis).abs == (1 || 0)))
-				piece_moves.delete(move)
+		destinations = boardstate.tiles.dup
+		destinations.each do |dest|
+			unless (((dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs == (1 || 0)) &&
+					((dest.coordinates.y_axis - self.coordinates.y_axis).abs == (1 || 0))) &&
+					dest != self.tile
+				destinations.delete(dest)
 			end
 		end
-		boardstate.movelist.each do |move|
-			if ((move.piece == self) && (piece_moves.include?(move) == false))
-				boardstate.movelist.delete(move)
-			end
-		end
+		return destinations
 	end
 	def castle_destination(rook_departure) #where will this piece end up if it castles?
 		if rook_departure.coordinates.name == "A1" #note: this will probably crash if it is unable to castle
@@ -647,11 +600,7 @@ class Queen < Piece
 		return simpiece
 	end
 	def criteria(boardstate)
-		boardstate.movelist.each do |move|
-			if ((move.piece == self) && (self.asterisk_path.include?(move.destination) == false))
-				boardstate.movelist.delete(move)
-			end
-		end
+		return (self.plus_path + self.x_path)
 	end
 end
 
@@ -693,24 +642,25 @@ class Pawn < Piece
 	def left_passant
 		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (2*self.orientation)))) && (tile.coordinates.x_axis == (self.coordinates.x_axis - 1)))}
 	end
-	def criteria(boardstate) #reminder: do we need movelist?
+	def criteria(boardstate)
 		destinations = []
 		if self.one_tile_ahead.occupied_piece == nil
 			destinations.push(self.one_tile_ahead)
-		elsif ((self.one_tile_ahead.occupied_piece == nil) && (self.two_tiles_ahead.occupied_piece == nil) && (self.moved == false))
+		elsif ((self.one_tile_ahead.occupied_piece == nil) &&
+				(self.two_tiles_ahead.occupied_piece == nil) &&
+				(self.moved == false))
 			destinations.push(self.one_tile_ahead)
 			destinations.push(self.two_tiles_ahead)
 		end
-		if ((self.right_diagonal != nil) && (self.right_diagonal.occupied_piece != nil) && (self.right_diagonal.occupied_piece.team == self.team.opposite))
+		if ((self.right_diagonal != nil) &&
+				(self.right_diagonal.occupied_piece != nil) &&
+				(self.right_diagonal.occupied_piece.team == self.team.opposite))
 			destinations.push(self.right_diagonal)
 		end
-		if ((self.left_diagonal != nil) && (self.left_diagonal.occupied_piece != nil) && (self.left_diagonal.occupied_piece.team == self.team.opposite))
+		if ((self.left_diagonal != nil) &&
+				(self.left_diagonal.occupied_piece != nil) &&
+				(self.left_diagonal.occupied_piece.team == self.team.opposite))
 			destinations.push(self.left_diagonal)
-		end
-		boardstate.movelist.each do |move|
-			if ((move.piece == self) && (destinations.include?(move.destination) == false ))
-				boardstate.movelist.delete(move)
-			end
 		end #the next set of if statements deals with en_passant
 		if ((self.game.history.last != nil) && (self.game.history.last.piece.rank == "pawn") && (self.game.history.last.first_move == true) && (self.game.history.last.destination == left_adjacent) && (self.game.history.last.departure == self.left_passant))
 			en_passant_move = Move.new(self.game, (self.simlevel.tiles.find {|tile| (tile.coordinates == self.coordinates)}), left_diagonal)
@@ -721,26 +671,22 @@ class Pawn < Piece
 			en_passant_move.taken = self.right_adjacent.occupied_piece
 			boardstate.movelist.push(en_passant_move)
 		end
+		return destinations
 	end
 	def promotion_prompt
-		valid_response = false
+		promotion = nil
 		until valid_response == true
 			puts "What would you like to promote your pawn to?"
 			promotion = gets.chomp.downcase
 			# replacement = nil
 			# commented out the above line because I can't remember what it's for
-			if promotion == "queen"
-				valid_response = true
-			elsif promotion == "knight"
-				valid_response = true
-			elsif promotion == "bishop"
-				valid_response = true
-			elsif promotion == "rook"
-				valid_response = true
+			valid_responses = ["queen", "knight", "bishop", "rook"]
+			if valid_responses.include?(promotion)
+				break
 			elsif promotion == "king"
 				puts "Sorry, there can only be one king."
 			elsif promotion == "pawn"
-				puts "Sorry, you can't end your turn without promoting your pawn."
+				puts "Sorry, you can't promote to a pawn."
 			else
 				puts "Sorry, I didn't understand that."
 			end
@@ -1123,30 +1069,16 @@ def board_fill(board, pieces)
 end
 
 def generate_valid_moves(boardstate) #returns a list of every possible valid move for a given turn from an array of tiles
-	departures = boardstate.tiles.dup #this will be a list of every tile which contains a piece that can be moved
 	boardstate.movelist = [] #this is a list of all valid moves for the given state of the board, will be returned at the end
-	departures.each do |departure|
-		if departure.occupied_piece == nil || #removes all moves starting on unoccupied tiles from the list
-				departure.occupied_piece.team != boardstate.moving_team #ensures that the player is only allowed to move their own pieces
-			departures.delete(departure)
-		else #now that we have a list of tiles containing friendly pieces, we can generate possible moves for each piece
-			valid_destinations = boardstate.tiles.dup #this will be a list of valid destinations for a given departure
-			valid_destinations.each do |destination|
-				if ((destination.occupied_piece != nil) && (destination.occupied_piece.team == boardstate.moving_team)) #removes tiles occupied by friendly pieces from the list of valid destinations
-					valid_destinations.delete(destination)
-				else
-					move = Move.new(boardstate.game, departure, destination) #if all criteria are met, the move is added to the list of valid moves
-					boardstate.movelist.push(move)
-				end
-			end
-		end
-	end
-	boardstate.pieces.each do |piece|
+	mover_pieces = boardstate.pieces.select {|piece| piece.team == boardstate.moving_team}
+	mover_pieces.each do |piece|
 		nonself_moves_before = boardstate.movelist.select {|move| move.piece != piece}
 		# we need to have a record so that we know if a piece's criteria is
 		# messing with moves that don't belong to that piece
-		if piece.team == boardstate.moving_team
-			piece.criteria(boardstate)
+		destinations = piece.criteria(boardstate)
+		destinations.each do |destination|
+			move = Move.new(boardstate.game, piece.tile, destination)
+			boardstate.movelist.push(move)
 		end
 		nonself_moves_after = boardstate.movelist.select {|move| move.piece != piece}
 		unless nonself_moves_before == nonself_moves_after
@@ -1155,6 +1087,18 @@ def generate_valid_moves(boardstate) #returns a list of every possible valid mov
 			# that piece, and, in the case of a rook, adding an option to castle if
 			# applicable. If moves that move other pieces get added or removed,
 			# something isn't working correctly.
+		end
+	end
+	boardstate.movelist.each do |move|
+		if move.destination == "castle"
+			#this is only here to avoid calling "castle".destination and getting an error
+			puts "#{move.piece.name} castle" #delete later
+		elsif ((move.destination.occupied_piece != nil) && (move.destination.occupied_piece.team == move.piece.team)) ||
+				boardstate.tiles.include?(move.destination) == false ||
+				move.destination == move.departure
+			boardstate.movelist.delete(move)
+		else
+			puts "#{move.piece.name} #{move.departure.coordinates.name} to #{move.destination.coordinates.name}" #delete later
 		end
 	end
 	puts "done" #delete later
