@@ -387,7 +387,14 @@ class Piece
 		end
 	end
 	def tile
-		return (self.simlevel.tiles.find {|tile| tile.coordinates == self.coordinates})
+		self.simlevel.tiles.find {
+			|tile| tile.coordinates == self.coordinates
+		}
+	end
+	def simulate
+		piece_sim = self.class.new(self.color, self.tile.coordinates.name, self.serial, self.game, self.depth - 1)
+		piece_sim.moved = self.moved
+		piece_sim
 	end
 	def plus_path #all the possible moves of a rook
 		north_path = Path.new(self, "N")
@@ -432,53 +439,47 @@ class Rook < Piece
 	def initialize(team, tilename, serial, game, depth = 0)
 		super("rook", team, tilename, serial, game, depth)
 	end
-	def simulate
-		simpiece = Rook.new(self.color, self.coordinates.name, self.serial, self.game, (self.depth - 1)) #the tile given as an argument should be the one with the same depth
-		simpiece.moved = self.moved
-		return simpiece
+	def clear_path?(tiles)
+		x_between = in_between(self.coordinates.x_axis, king.coordinates.x_axis)
+		path_tiles = tiles.select {|tile|
+			tile.coordinates.y_axis == self.coordinates.y_axis &&
+			x_between.include?(tile.coordinates.x_axis)
+		}
+		if path_tiles.any? {|tile| !!tile.occupied_piece}
+			return false
+		else
+			return path_tiles
+		end
+	end
+	def safe_path?(castle_path, king)
+		king_path = [king.tile, king.castle_destination(self.coordinates.name)]
+		king_x = king.tile.coordinates.x_axis
+		self_x = self.tile.coordinates.x_axis
+		x_coor = in_between(king_x, self_x)
+		steps = castle_path.select {|tile| x_coor.include?(tile.coordinates.x_axis)}
+		safe? = (king_path + steps).any? {|tile|
+			Move.new(self.game, king.tile, tile).ally_check == true
+		}
 	end
 	def can_castle
 		tiles = self.game.simlevels[self.depth.abs].tiles #start with an array of all the tiles in the current simlevel
 		king = self.team.kings[self.depth.abs]
-		both_unmoved = false # have the king or rook or both been moved yet?
-		both_unmoved = true if (self.moved == (false) && (king.moved == false))
-		clear_path = true #are there any pieces between the king and rook?
-		intermediate_tiles = tiles.select {|tile| tile.coordinates.y_axis == self.coordinates.y_axis} #we only care about tiles in the same row as the king and rook
-		intermediate_tiles.select! {|tile| in_between(self.coordinates.x_axis, king.coordinates.x_axis).include?(tile.coordinates.y_axis)}
-		intermediate_tiles.each do |tile|
-			if tile.occupied_piece != nil
-				clear_path = false
-			end
-		end
-		safe_path = true #would the king be in check on any of the tiles it moves through?
-		kingpath_tiles = intermediate_tiles.select {|tile| tile.coordinates.x_axis.between?((king.coordinates.x_axis - 2), (king.coordinates.x_axis + 2))}
-		kingpath_tiles.each do |tile|
-			if Move.new(self.game, king.tile, tile).ally_check == true
-				safe_path = false
-			end
-		end
-		if ((safe_path == true) && (clear_path == true) && (both_unmoved == true) && ((self.game.history.empty? == true) || (self.game.history.last.enemy_check == false)))
-			return true
-		else
-			return false
-		end
+		both_unmoved = (self.moved == false && king.moved == false) # have the king or rook or both been moved yet?
+		castle_path = self.clear_path?(tiles) #are there any pieces between the king and rook?
+		safe_path = self.safe_path?(castle_path, king) #would the king be in check on any of the tiles it moves through?
+		last_move = game.history.last
+		last_move_check? = (!!last_move? || !last_move.enemy_check)
+		return (!!castle_path && safe_path && both_unmoved && !last_move_check)
 	end
-	def criteria(boardstate)
+	def criteria
 		if ((self.depth > (-2)) && (self.can_castle == true)) #the former condition is in place to prevent infinite loops where check detect simulates castling as a possible move, which in turn must run check detect
-			boardstate.movelist.push(Move.new(self.game, self.tile, "castle"))
+			self.boardstate.movelist.push(Move.new(self.game, self.tile, "castle"))
 		end
-		return self.plus_path
+		self.plus_path
 	end
 	def castle_destination #where will this piece end up if it castles?
-		if self.coordinates.name == "A1" #note: this will probably crash if self.can_castle == false
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "D1"}
-		elsif self.coordinates.name == "A8"
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "D8"}
-		elsif self.coordinates.name == "H1"
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "F8"}
-		elsif self.coordinates.name == "H8"
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "F1"}
-		end
+		destinations = {"A1" => "D1", "A8" => "D8", "H1" => "F1", "H8" => "F8"}
+		destinations[self.coordinates.name.capitalize]
 	end
 	def castle(move)
 		move.previous_turn = move.game.history.last
@@ -515,13 +516,8 @@ class Knight < Piece
 	def initialize(team, tilename, serial, game, depth = 0)
 		super("knight", team, tilename, serial, game, depth)
 	end
-	def simulate
-		simpiece = Knight.new(self.color, self.coordinates.name, self.serial, self.game, (self.depth - 1)) #the tile given as an argument should be the one with the same depth
-		simpiece.moved = self.moved
-		return simpiece
-	end
-	def criteria(boardstate)
-		destinations = boardstate.tiles.dup
+	def criteria
+		destinations = self.boardstate.tiles.dup
 		destinations.each do |dest|
 			x_difference = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
 			y_difference = (dest.coordinates.y_axis - self.tile.coordinates.y_axis).abs
@@ -537,56 +533,37 @@ class Bishop < Piece
 	def initialize(team, tilename, serial, game, depth = 0)
 		super("bishop", team, tilename, serial, game, depth)
 	end
-	def simulate
-		simpiece = Bishop.new(self.color, self.tile.coordinates.name, self.serial, self.game, (self.depth - 1)) #the tile given as an argument should be the one with the same depth
-		simpiece.moved = self.moved
-		return simpiece
-	end
-	def criteria(boardstate)
-		return self.x_path
+	def criteria
+		self.x_path
 	end
 end
 
 class King < Piece
-	def initialize(team, tilename, serial, game, depth = 0)
-		super("king", team, tilename, serial, game, depth)
-		team = nil
-		if color == "black"
-			team = game.black_team
-		else
-			team = game.white_team
-		end
-		if team.kings.count < (depth.abs + 1)
+	def initialize(color, tilename, serial, game, depth = 0)
+		super("king", color, tilename, serial, game, depth)
+		if team.kings.count < (self.depth.abs + 1)
 			team.kings.push(self)
 		else
-			team.kings[depth.abs] = self
+			team.kings[self.depth.abs] = self
 		end
 	end
-	def simulate #the simulate method for kings has to be able to update the king of the appropriate simlevel
-		king_simulation = King.new(self.color, self.tile.coordinates.name, self.serial, self.game, (self.depth - 1)) #the tile given as an argument should be the one with the same depth
-		return king_simulation
-	end
-	def criteria(boardstate)
-		destinations = boardstate.tiles.dup
+	def criteria
+		destinations = self.boardstate.tiles.dup
 		destinations.each do |dest|
-			unless (((dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs == (1 || 0)) &&
-					((dest.coordinates.y_axis - self.coordinates.y_axis).abs == (1 || 0))) &&
-					dest != self.tile
+			x_diff = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
+			y_diff = (dest.coordinates.y_axis - self.coordinates.y_axis).abs
+			x_one_or_zero = (x_diff == 1 || x_diff == 0)
+			y_one_or_zero = (y_diff == 1 || y_diff == 0)
+			unless x_one_or_zero && y_one_or_zero && dest != self.tile
 				destinations.delete(dest)
 			end
 		end
 		return destinations
 	end
-	def castle_destination(rook_departure) #where will this piece end up if it castles?
-		if rook_departure.coordinates.name == "A1" #note: this will probably crash if it is unable to castle
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "C1"}
-		elsif rook_departure.coordinates.name == "A8"
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "C8"}
-		elsif rook_departure.coordinates.name == "H1"
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "G1"}
-		elsif rook_departure.coordinates.name == "H8"
-			return self.simlevel.tiles.find {|tile| tile.coordinates.name == "G1"}
-		end
+	def castle_destination(rook_departure)
+		#where will this piece end up if it castles?
+		destinations = {"A1" => "C1", "A8" => "C8", "H1" => "G1", "H2" => "G8"}
+		destinations[self.coordinates.name]
 	end
 end
 
@@ -594,12 +571,7 @@ class Queen < Piece
 	def initialize(team, tilename, serial, game, depth = 0)
 		super("queen", team, tilename, serial, game, depth)
 	end
-	def simulate
-		simpiece = Queen.new(self.color, self.tile.coordinates.name, self.serial, self.game, (self.depth - 1)) #the tile given as an argument should be the one with the same depth
-		simpiece.moved = self.moved
-		return simpiece
-	end
-	def criteria(boardstate)
+	def criteria
 		return (self.plus_path + self.x_path)
 	end
 end
@@ -618,59 +590,109 @@ class Pawn < Piece
 		simpiece.moved = self.moved
 		return simpiece
 	end
-	def one_tile_ahead
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (1*self.orientation)))) && (tile.coordinates.x_axis == self.coordinates.x_axis))}
+	def one_tile_ahead(destinations)
+		dest = self.simlevel.tiles.find {|tile|
+			tile.coordinates.y_axis == self.coordinates.y_axis + self.orientation &&
+			tile.coordinates.x_axis == self.coordinates.x_axis
+		}
+		unless !dest || !!dest.occupied_piece
+			destinations.push(dest)
+			return true
+		end
 	end
-	def two_tiles_ahead
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (2*self.orientation)))) && (tile.coordinates.x_axis == self.coordinates.x_axis))}
+	def two_tiles_ahead(destinations)
+		dest = self.simlevel.tiles.find {|tile|
+		tile.coordinates.y_axis == self.coordinates.y_axis + 2*self.orientation &&
+		tile.coordinates.x_axis == self.coordinates.x_axis
+		}
+		destinations.push(dest) unless !dest || !!dest.occupied_piece || self.moved
 	end
-	def right_diagonal #the tile ahead and to the right that the pawn can move to iff it is occupied by an enemy piece
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (1*self.orientation)))) && (tile.coordinates.x_axis == (self.coordinates.x_axis + 1)))}
+	def right_diagonal(destinations) #the tile ahead and to the right that the
+		# pawn can move to if it's occupied by an enemy piece
+		dest = self.simlevel.tiles.find {|tile|
+		tile.coordinates.y_axis == self.coordinates.y_axis + self.orientation &&
+		tile.coordinates.x_axis == self.coordinates.x_axis + 1
+		}
+		taken = dest.occupied_piece
+		destinations.push(dest) unless !dest || !taken || taken.team == self.team
+		dest
 	end
-	def left_diagonal
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (1*self.orientation)))) && (tile.coordinates.x_axis == (self.coordinates.x_axis - 1)))}
+	def left_diagonal(destinations)
+		dest = self.simlevel.tiles.find {|tile|
+		tile.coordinates.y_axis == self.coordinates.y_axis + self.orientation &&
+		tile.coordinates.x_axis == self.coordinates.x_axis - 1
+		}
+		taken = dest.occupied_piece
+		destinations.push(dest) unless !dest || !taken || taken.team == self.team
+		dest
+	end
 	end
 	def right_adjacent
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == self.coordinates.y_axis)) && (tile.coordinates.x_axis == (self.coordinates.x_axis + 1)))}
+		return self.simlevel.tiles.find {|tile|
+		tile.coordinates.y_axis == self.coordinates.y_axis &&
+		tile.coordinates.x_axis == self.coordinates.x_axis + 1
+	}
 	end
 	def left_adjacent
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == self.coordinates.y_axis)) && (tile.coordinates.x_axis == (self.coordinates.x_axis - 1)))}
+		return self.simlevel.tiles.find {|tile|
+		tile.coordinates.y_axis == self.coordinates.y_axis &&
+		tile.coordinates.x_axis == self.coordinates.x_axis - 1
+	}
 	end
-	def right_passant #the tile two squares ahead and one square to the right that an enemy pawn would need to have moved from in order to give this piece the opportunity to make an en_passant move
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (2*self.orientation)))) && (tile.coordinates.x_axis == (self.coordinates.x_axis + 1)))}
-	end
-	def left_passant
-		return self.simlevel.tiles.find {|tile| (((tile.coordinates.y_axis == (self.coordinates.y_axis + (2*self.orientation)))) && (tile.coordinates.x_axis == (self.coordinates.x_axis - 1)))}
-	end
-	def criteria(boardstate)
-		destinations = []
-		if self.one_tile_ahead.occupied_piece == nil
-			destinations.push(self.one_tile_ahead)
-		elsif ((self.one_tile_ahead.occupied_piece == nil) &&
-				(self.two_tiles_ahead.occupied_piece == nil) &&
-				(self.moved == false))
-			destinations.push(self.one_tile_ahead)
-			destinations.push(self.two_tiles_ahead)
+	def right_passant(r_diag)
+		#the tile two squares ahead and one square to the right that an enemy pawn would need to have moved from in order to give this piece the opportunity to make an en_passant move
+		taken = self.right_adjacent.occupied_piece if !!self.right_adjacent
+		last_move = self.game.history.last
+		y_coor = self.coordinates.y_axis + 2*self.orientation
+		x_coor = self.coordinates.x_axis + 1
+		passant = self.simlevel.tiles.find { |tile|
+			tile.coordinates.y_axis == y_coor && tile.coordinates.x_axis == x_coor }
+		if (!!taken && taken.team != self.team && taken.class == Pawn &&
+			!!last_move && last_move.piece == taken &&
+			last_move.departure == passant &&
+			last_move.destination == self.right_adjacent)
+			return r_diag
+		else
+			return nil
 		end
-		if ((self.right_diagonal != nil) &&
-				(self.right_diagonal.occupied_piece != nil) &&
-				(self.right_diagonal.occupied_piece.team == self.team.opposite))
-			destinations.push(self.right_diagonal)
+	end
+	def left_passant(l_diag)
+		taken = self.left_adjacent.occupied_piece if !!self.left_adjacent
+		last_move = self.game.history.last
+		y_coor = self.coordinates.y_axis + 2*self.orientation
+		x_coor = self.coordinates.x_axis - 1
+		passant = self.simlevel.tiles.find { |tile|
+			tile.coordinates.y_axis == y_coor && tile.coordinates.x_axis == x_coor }
+		if (!!taken && taken.team != self.team && taken.class == Pawn &&
+			!!last_move && last_move.piece == taken &&
+			last_move.departure == passant &&
+			last_move.destination == self.left_adjacent)
+			return l_diag
+		else
+			return nil
 		end
-		if ((self.left_diagonal != nil) &&
-				(self.left_diagonal.occupied_piece != nil) &&
-				(self.left_diagonal.occupied_piece.team == self.team.opposite))
-			destinations.push(self.left_diagonal)
-		end #the next set of if statements deals with en_passant
-		if ((self.game.history.last != nil) && (self.game.history.last.piece.rank == "pawn") && (self.game.history.last.first_move == true) && (self.game.history.last.destination == left_adjacent) && (self.game.history.last.departure == self.left_passant))
-			en_passant_move = Move.new(self.game, (self.simlevel.tiles.find {|tile| (tile.coordinates == self.coordinates)}), left_diagonal)
-			en_passant_move.taken = self.left_adjacent.occupied_piece
-			boardstate.movelist.push(en_passant_move)
-		elsif ((self.game.history.last != nil) && (self.game.history.last.piece.rank == "pawn") && (self.game.history.last.first_move == true) && (self.game.history.last.destination == right_adjacent) && (self.game.history.last.departure == self.right_passant))
-			en_passant_move = Move.new(self.game, (self.simlevel.tiles.find {|tile| (tile.coordinates == self.coordinates)}), diagonal)
+	end
+	def add_passant_moves(r_pass, l_pass)
+		if !!r_pass
+			en_passant_move = Move.new(self.game, self.tile, r_pass)
 			en_passant_move.taken = self.right_adjacent.occupied_piece
-			boardstate.movelist.push(en_passant_move)
+			self.boardstate.movelist.push(en_passant_move)
+		elsif !!l_pass # there can only be one en passant move, because the
+			# destination of an en passant move is relative to the last move
+			en_passant_move = Move.new(self.game, self.tile, l_pass)
+			en_passant_move.taken = self.left_adjacent.occupied_piece
+			self.boardstate.movelist.push(en_passant_move)
 		end
+	end
+	def criteria
+		destinations = []
+		self.two_tiles_ahead(destinations) if self.one_tile_ahead(destinations)
+		r_diag = self.right_diagonal(destinations)
+		l_diag = self.left_diagonal(destinations)
+		#the next set of if statements deals with en_passant
+		r_pass = self.right_passant(r_diag)
+		l_pass = self.left_passant(l_diag)
+		self.add_passant_moves(r_pass, l_pass)
 		return destinations
 	end
 	def promotion_prompt
@@ -1075,7 +1097,7 @@ def generate_valid_moves(boardstate) #returns a list of every possible valid mov
 		nonself_moves_before = boardstate.movelist.select {|move| move.piece != piece}
 		# we need to have a record so that we know if a piece's criteria is
 		# messing with moves that don't belong to that piece
-		destinations = piece.criteria(boardstate)
+		destinations = piece.criteria
 		destinations.each do |destination|
 			move = Move.new(boardstate.game, piece.tile, destination)
 			boardstate.movelist.push(move)
