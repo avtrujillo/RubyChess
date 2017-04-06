@@ -827,7 +827,9 @@ class Player #will probably be used in save states later
 end
 
 class Move
-	attr_accessor :departure, :piece, :destination, :taken, :team, :enemy, :turn, :extras, :game_end, :snapshot, :previous_turn, :following_turn, :game, :ally_check_cache, :enemy_check_cache, :first_move
+	attr_accessor :departure, :piece, :destination, :taken, :team, :enemy, :turn,
+	:extras, :game_end, :snapshot, :previous_turn, :following_turn, :game,
+	:ally_check_cache, :enemy_check_cache, :first_move
 	def initialize(game, departure, destination) #set taken to nil if no piece is taken
 		@game = game
 		@departure = departure #the tile the moving piece is leaving from
@@ -840,13 +842,10 @@ class Move
 		@moving_team = @piece.team #the team that is making the move
 		@enemy = @piece.team.opposite
 		@turn = game.boardstate.turn_counter
-		@game_end = nil #reminder: use this in game_over, anything other than nil indicates it is a game over, the string refers to how
-		@snapshot = nil #at the END of the move
-		@previous_turn = nil
-		@following_turn = nil
-		@ally_check_cache = nil #these will be used to cache the results of check_detect as needed
-		@enemy_check_cache = nil
 		@first_move = @piece.moved
+		# reminder: use @game_end in game_over, anything other than nil indicates it is a game over, the string refers to how/why
+		# @ snapshot is taken at the END of the move
+		# @check_cache will be used to cache the results of check_detect as needed
 	end
 	def white_check
 		if self.moving_team == self.game.white_team
@@ -1083,7 +1082,6 @@ def starting_pieces(game) #returns an array of all pieces in their starting post
 	Pawn.new("black", "F7", 6, game, 0),
 	Pawn.new("black", "G7", 7, game, 0),
 	Pawn.new("black", "H7", 8, game, 0) ]
-	return pieces
 end
 
 def board_fill(board, pieces)
@@ -1297,7 +1295,8 @@ def display_scoreboard #future improvement: add name feature, add the ability to
 end
 
 =begin
-To explain how the display works: each tile is a 3x3 arrangement of unicode characters, like so:
+To explain how the display works: each tile is a 3x3 arrangement of unicode
+characters, the middle of which is the piece icon:
 
 ■■■
 ■♖■
@@ -1389,27 +1388,10 @@ def initiate
 	main_menu
 end
 
-#and now on to the actual running of the program
+# and now on to the actual running of the program
 
-if $needs_testing == true #this step is ony for debugging
+if $needs_testing == true # this step is ony for debugging
 	$test_protocol
-end
-
-def move_class_count(movelist) #for debugging
-	class_count = []
-	movelist.each do |move|
-		move_class = class_count.find {|foo| foo[0] == move.class.to_s}
-		if move_class == nil
-			class_count.push([move.class.to_s, 1])
-		else
-			move_class[1] += 1
-		end
-	end
-	puts "begin class list"
-	class_count.each do |moveclass|
-		puts moveclass[0] + " " + moveclass[1].to_s
-	end
-	puts "end class list"
 end
 
 initiate
