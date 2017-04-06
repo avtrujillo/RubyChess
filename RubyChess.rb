@@ -363,6 +363,51 @@ class Path # used to find the possible moves of a rook, bishop, or queen
 	end
 end
 
+class CastlePath # note: not a subclass of Path
+	attr_accessor :rook, :tiles, :king_tiles, :king, :rook_tiles,
+	:rook_dest, :king_dest
+	def initialize(rook)
+		@rook = rook
+		@king = rook.team.kings[rook.depth.abs]
+		@tiles = @rook.simlevel.tiles
+		@rook_tiles = []
+		@king_tiles = []
+		self.find_rook_path
+		self.find_rook_path
+		@rook_dest = @path_tiles.last
+		@king_dest = @king_tiles.last
+	end
+	def find_rook_path
+		rook_path_hash = {
+			"A1" => ["B1", "C1" "D1"], "A8" => ["B8", "C8" "D8"],
+			"H1" => ["G1", "F1"], "H8" => ["G8", "F8"]
+		}
+		tiles = self.piece.simlevel.tiles
+		rook_path_hash[self.piece.tile.name.capitalize].each do |coor|
+			tile = tiles.find {|tile| tile.coordinates.name == coor}
+			self.path_tiles.push(tile)
+		end
+	end
+	def find_king_path
+		king_path_hash = {
+			"A1" => ["E1", "D1" "C1"], "A8" => ["E8", "D8" "C8"],
+			"H1" => ["E1", "F1", "G1"], "H8" => ["E8", "F8", "G1"]
+		}
+		king_path_hash[self.piece.tile.name.capitalize].each do |coor|
+			tile = tiles.find {|tile| tile.coordinates.name == coor}
+			self.king_tiles.push(tile)
+		end
+	end
+	def clear?
+		!(self.rook_tiles.any? {|tile| !!tile.occupied_piece})
+	end
+	def safe?
+		self.king_tiles.any? {|tile|
+			Move.new(self.game, king.tile, tile).ally_check == true
+		}
+	end
+end
+
 class Piece
 	attr_accessor :rank, :coordinates, :title, :name, :serial, :depth, :game, :moved, :color
 	def initialize(rank, color, tilename, serial, game, depth = 0)
@@ -436,51 +481,28 @@ But no, now you are obligated to suck at least one nut as a direct result of you
 #unfinished: fix the whole sim/deep clone fiasco (make it a single integer, etc)
 
 class Rook < Piece
+	attr_accessor :castle_path, :castle_dest, :castle_tiles
 	def initialize(team, tilename, serial, game, depth = 0)
 		super("rook", team, tilename, serial, game, depth)
 	end
-	def clear_path?(tiles, king)
-		x_between = in_between(self.coordinates.x_axis, king.coordinates.x_axis)
-		path_tiles = tiles.select {|tile|
-			tile.coordinates.y_axis == self.coordinates.y_axis &&
-			x_between.include?(tile.coordinates.x_axis)
-		}
-		if path_tiles.any? {|tile| !!tile.occupied_piece}
-			return false
-		else
-			return path_tiles
-		end
-	end
-	def safe_path?(castle_path, king)
-		return false unless !!castle_path
-		king_path = [king.tile, king.castle_destination(self.coordinates.name)]
-		king_x = king.tile.coordinates.x_axis
-		self_x = self.tile.coordinates.x_axis
-		x_coor = in_between(king_x, self_x)
-		steps = castle_path.select {|tile| x_coor.include?(tile.coordinates.x_axis)}
-		safe = (king_path + steps).any? {|tile|
-			Move.new(self.game, king.tile, tile).ally_check == true
-		}
-	end
 	def can_castle?
-		tiles = self.game.simlevels[self.depth.abs].tiles #start with an array of all the tiles in the current simlevel
+		self.castle_path = CastlePath.new(self)
+		self.castle_tiles = @castle_path.path_tiles
+		self.castle_dest = @castle_tiles.last
 		king = self.team.kings[self.depth.abs]
 		both_unmoved = (self.moved == false && king.moved == false) # have the king or rook or both been moved yet?
-		castle_path = self.clear_path?(tiles, king) #are there any pieces between the king and rook?
-		safe_path = self.safe_path?(castle_path, king) #would the king be in check on any of the tiles it moves through?
+		return false unless both_unmoved && !!self.castle_path
+		clear = self.castle_path.clear?
+		safe = self.castle_path.safe?
 		last_move = game.history.last
 		last_move_check = !(!last_move || !!last_move.enemy_check)
-		return (!!castle_path && safe_path && both_unmoved && !last_move_check)
+		(safe && !last_move_check)
 	end
 	def criteria
-		if ((self.depth > (-2)) && (self.can_castle? == true)) #the former condition is in place to prevent infinite loops where check detect simulates castling as a possible move, which in turn must run check detect
-			self.game.boardstate.movelist.push(Move.new(self.game, self.tile, "castle"))
+		if (self.depth > 2) && (self.serial < 3) && self.can_castle? #the former condition is in place to prevent infinite loops where check detect simulates castling as a possible move, which in turn must run check detect
+			self.simlevel.movelist.push(Move.new(self.game, self.tile, "castle"))
 		end
 		self.plus_path
-	end
-	def castle_destination #where will this piece end up if it castles?
-		destinations = {"A1" => "D1", "A8" => "D8", "H1" => "F1", "H8" => "F8"}
-		destinations[self.coordinates.name.capitalize]
 	end
 	def castle(move)
 		move.previous_turn = move.game.history.last
@@ -489,21 +511,21 @@ class Rook < Piece
 		move.piece.coordinates = destination.coordinates
 		move.destination.occupied_piece = move.piece
 		move.departure.occupied_piece = nil
-		king = move.game.boardstate.king
-		king_destination = king.castle_destination(rook_departure)
+		king = move.simlevel.king
+		king_destination = self.castle_path.king_dest
 		king_departure = king.tile
 		king_destination.occupied_piece = king
 		king_departure.occupied_piece = nil
 		king.coordinates = king_destination.coordinates
 		move.game.move_history.push(move) #reminder: should this happen before or after game over?
-		move.game.boardstate.turn_counter += 1
+		move.simlevel.turn_counter += 1
 		move.piece.moved = true
-		move.game.boardstate.moving_team = move.team.opposite
-		move.snapshot = Snapshot.new(move.game.boardstate)
-		generate_valid_moves(move.game.boardstate)
-		if (move.enemy_check == true) && (move.game.boardstate.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
+		move.simlevel.moving_team = move.team.opposite
+		move.snapshot = Snapshot.new(move.simlevel)
+		generate_valid_moves(move.simlevel)
+		if (move.enemy_check == true) && (move.simevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
 			game_over(move, checkmate)
-		elsif (move.enemy_check == false) && (move.game.boardstate.movelist.find {|found_move| found_move.ally_check == false} == nil)
+		elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
 			game_over(move, stalemate)
 		end
 		board_display(move.game.board)
@@ -519,7 +541,7 @@ class Knight < Piece
 	end
 	def criteria
 		valid_destinations = []
-		possible_destinations = self.game.boardstate.tiles.dup
+		possible_destinations = self.simlevel.tiles.dup
 		possible_destinations.each do |dest|
 			x_difference = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
 			y_difference = (dest.coordinates.y_axis - self.tile.coordinates.y_axis).abs
@@ -551,7 +573,7 @@ class King < Piece
 	end
 	def criteria
 		valid_destinations = []
-		candidate_destinations = self.game.boardstate.tiles.dup
+		candidate_destinations = self.simlevel.tiles.dup
 		candidate_destinations.each do |dest|
 			x_diff = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
 			y_diff = (dest.coordinates.y_axis - self.coordinates.y_axis).abs
@@ -563,11 +585,6 @@ class King < Piece
 		end
 		return valid_destinations
 	end
-	def castle_destination(rook_departure)
-		#where will this piece end up if it castles?
-		destinations = {"A1" => "C1", "A8" => "C8", "H1" => "G1", "H2" => "G8"}
-		destinations[self.coordinates.name]
-	end
 end
 
 class Queen < Piece
@@ -575,7 +592,7 @@ class Queen < Piece
 		super("queen", team, tilename, serial, game, depth)
 	end
 	def criteria
-		return (self.plus_path + self.x_path)
+		(self.plus_path + self.x_path)
 	end
 end
 
@@ -678,12 +695,12 @@ class Pawn < Piece
 		if !!r_pass
 			en_passant_move = Move.new(self.game, self.tile, r_pass)
 			en_passant_move.taken = self.right_adjacent.occupied_piece
-			self.game.boardstate.movelist.push(en_passant_move)
+			self.simlevel.movelist.push(en_passant_move)
 		elsif !!l_pass # there can only be one en passant move, because the
 			# destination of an en passant move is relative to the last move
 			en_passant_move = Move.new(self.game, self.tile, l_pass)
 			en_passant_move.taken = self.left_adjacent.occupied_piece
-			self.game.boardstate.movelist.push(en_passant_move)
+			self.simlevel.movelist.push(en_passant_move)
 		end
 	end
 	def criteria
@@ -717,20 +734,22 @@ class Pawn < Piece
 		end
 		return promotion
 	end
+	def create_replacement(promotion)
+		if promotion == "queen"
+			return Queen.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
+		elsif promotion == "knight"
+			return Knight.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
+		elsif promotion == "bishop"
+			return Bishop.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
+		elsif promotion == "rook"
+			return Rook.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
+		end
+	end
 	def promote(promotion)
 		if promotion == "random"
-			possibilities = ["queen", "knight", "bishop", "rook"]
-			promotion = possibilities[rand(1..4)]
+			promotion = ["queen", "knight", "bishop", "rook"].sample
 		end
-		if promotion == "queen"
-			replacement = Queen.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
-		elsif promotion == "knight"
-			replacement = Knight.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
-		elsif promotion == "bishop"
-			replacement = Bishop.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
-		elsif promotion == "rook"
-			replacement = Rook.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.rank == promotion}).count) + 1), self.depth)
-		end
+		replacement = self.create_replacement(promotion)
 		self.tile.occupied_piece = replacement
 		replacement.moved = true
 		self.coordinates = nil
@@ -829,11 +848,12 @@ end
 class Move
 	attr_accessor :departure, :piece, :destination, :taken, :team, :enemy, :turn,
 	:extras, :game_end, :snapshot, :previous_turn, :following_turn, :game,
-	:ally_check_cache, :enemy_check_cache, :first_move
+	:ally_check_cache, :enemy_check_cache, :first_move, :simlevel
 	def initialize(game, departure, destination) #set taken to nil if no piece is taken
 		@game = game
 		@departure = departure #the tile the moving piece is leaving from
 		@piece = departure.occupied_piece
+		@simlevel = @game.simlevels.find {|level| level.depth == @piece.depth}
 		@destination = destination #the tile the moving piece is arriving at
 		@taken = nil
 		unless @destination == "castle"
@@ -922,10 +942,10 @@ class Move
 		simstate = (self.game.simlevels.find {|level| (level.depth == self.piece.depth)}).simulate
 		if self.destination == "castle"
 			rook_departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
-			rook_destination = self.piece.castle_destination
+			rook_destination = self.piece.castle_dest
 			rook = simstate.pieces.find {|piece| piece.name == self.piece.name}
 			king = simstate.friendly_king
-			king_destination = king.castle_destination(rook_departure)
+			king_destination = rook.castle_path.king_dest
 			king_departure = king.tile
 			king_destination.occupied_piece = king
 			king_departure.occupied_piece = nil
@@ -960,7 +980,7 @@ def execute_move(move)
 		puts "#{move.team.color.capitalize}'s #{move.piece.rank} has taken #{move.enemy.color}'s' #{move.taken.rank}"
 	end
 	unless (move.taken != nil) || (move.piece.rank == pawn)
-		move.game.boardstate.fifty_move_counter += 1
+		move.simlevel.fifty_move_counter += 1
 	end
 	move.piece.coordinates = destination.coordinates
 	move.destination.occupied_piece = move.piece
@@ -973,33 +993,33 @@ def execute_move(move)
 		end
 	end
 	move.game.move_history.push(move) #reminder: should this happen before or after game over?
-	move.game.boardstate.turn_counter += 1
+	move.simlevel.turn_counter += 1
 	move.piece.moved = true
-	move.game.boardstate.moving_team = move.team.opposite
-	move.snapshot = Snapshot.new(move.game.boardstate)
-	generate_valid_moves(move.game.boardstate)
-	if (move.enemy_check == true) && (move.game.boardstate.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
+	move.simlevel.moving_team = move.team.opposite
+	move.snapshot = Snapshot.new(move.simlevel)
+	generate_valid_moves(move.simlevel)
+	if (move.enemy_check == true) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
 		game_over(move, checkmate)
-	elsif (move.enemy_check == false) && (move.game.boardstate.movelist.find {|found_move| found_move.ally_check == false} == nil)
+	elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
 		game_over(move, stalemate)
 	end
-	if move.game.boardstate.fifty_move_counter == 50
+	if move.simlevel.fifty_move_counter == 50
 		game_over(move, "fifty moves")
 	end
 	board_display(move.game.board)
 	if (move.enemy_check == true)
 		puts "#{move.enemy.capitalize}'s king is in check!"
 	end
-	if move.game.boardstate.fifty_move_counter == 20
+	if move.simlevel.fifty_move_counter == 20
 		puts "It has been 20 moves since a pawn has been moved or a pieces has been taken."
 		puts "If no piece is captured or pawn moved in the next 30 turns, the game will end\nin a draw."
-	elsif move.game.boardstate.fifty_move_counter == 30
+	elsif move.simlevel.fifty_move_counter == 30
 		puts "It has been 30 moves since a pawn has been moved or a pieces has been taken."
 		puts "If no piece is captured or pawn moved in the next 20 turns, the game will end\nin a draw."
-	elsif move.game.boardstate.fifty_move_counter == 40
+	elsif move.simlevel.fifty_move_counter == 40
 		puts "It has been 40 moves since a pawn has been moved or a pieces has been taken."
 		puts "If no piece is captured or pawn moved in the next 10 turns, the game will end\nin a draw."
-	elsif move.game.boardstate.fifty_move_counter == 45
+	elsif move.simlevel.fifty_move_counter == 45
 		puts "It has been 45 moves since a pawn has been moved or a pieces has been taken."
 		puts "If no piece is captured or pawn moved in the next 5 turns, the game will end\nin a draw."
 	end
