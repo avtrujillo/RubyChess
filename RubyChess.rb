@@ -186,7 +186,7 @@ class Snapshot
 		@special_move_opportunities = []
 		boardstate.tiles.each do |tile| #I chose to do this with the tiles array rather than the pieces array because the order of the former never changes, and we want to be able to check whether the hashes are identical
 			@fossils[tile.occupied_piece.title] = tile.occupied_piece.coordinates
-			if (((tile.occupied_piece.rank == "rook") && (tile.occupied_piece.can_castle == true)) || ((tile.occupied_piece.rank == "pawn") && (boardstate.game.history.last.destination == tile) && ((boardstate.game.history.last.departure.y_axis - tile.y_axis).abs == 2)))
+			if (((tile.occupied_piece.rank == "rook") && (tile.occupied_piece.can_castle? == true)) || ((tile.occupied_piece.rank == "pawn") && (boardstate.game.history.last.destination == tile) && ((boardstate.game.history.last.departure.y_axis - tile.y_axis).abs == 2)))
 				@special_move_opportunities.push(tile)
 			end
 		end
@@ -439,7 +439,7 @@ class Rook < Piece
 	def initialize(team, tilename, serial, game, depth = 0)
 		super("rook", team, tilename, serial, game, depth)
 	end
-	def clear_path?(tiles)
+	def clear_path?(tiles, king)
 		x_between = in_between(self.coordinates.x_axis, king.coordinates.x_axis)
 		path_tiles = tiles.select {|tile|
 			tile.coordinates.y_axis == self.coordinates.y_axis &&
@@ -452,28 +452,29 @@ class Rook < Piece
 		end
 	end
 	def safe_path?(castle_path, king)
+		return false unless !!castle_path
 		king_path = [king.tile, king.castle_destination(self.coordinates.name)]
 		king_x = king.tile.coordinates.x_axis
 		self_x = self.tile.coordinates.x_axis
 		x_coor = in_between(king_x, self_x)
 		steps = castle_path.select {|tile| x_coor.include?(tile.coordinates.x_axis)}
-		safe? = (king_path + steps).any? {|tile|
+		safe = (king_path + steps).any? {|tile|
 			Move.new(self.game, king.tile, tile).ally_check == true
 		}
 	end
-	def can_castle
+	def can_castle?
 		tiles = self.game.simlevels[self.depth.abs].tiles #start with an array of all the tiles in the current simlevel
 		king = self.team.kings[self.depth.abs]
 		both_unmoved = (self.moved == false && king.moved == false) # have the king or rook or both been moved yet?
-		castle_path = self.clear_path?(tiles) #are there any pieces between the king and rook?
+		castle_path = self.clear_path?(tiles, king) #are there any pieces between the king and rook?
 		safe_path = self.safe_path?(castle_path, king) #would the king be in check on any of the tiles it moves through?
 		last_move = game.history.last
-		last_move_check? = (!!last_move? || !last_move.enemy_check)
+		last_move_check = !(!last_move || !!last_move.enemy_check)
 		return (!!castle_path && safe_path && both_unmoved && !last_move_check)
 	end
 	def criteria
-		if ((self.depth > (-2)) && (self.can_castle == true)) #the former condition is in place to prevent infinite loops where check detect simulates castling as a possible move, which in turn must run check detect
-			self.boardstate.movelist.push(Move.new(self.game, self.tile, "castle"))
+		if ((self.depth > (-2)) && (self.can_castle? == true)) #the former condition is in place to prevent infinite loops where check detect simulates castling as a possible move, which in turn must run check detect
+			self.game.boardstate.movelist.push(Move.new(self.game, self.tile, "castle"))
 		end
 		self.plus_path
 	end
@@ -517,15 +518,16 @@ class Knight < Piece
 		super("knight", team, tilename, serial, game, depth)
 	end
 	def criteria
-		destinations = self.boardstate.tiles.dup
-		destinations.each do |dest|
+		valid_destinations = []
+		possible_destinations = self.game.boardstate.tiles.dup
+		possible_destinations.each do |dest|
 			x_difference = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
 			y_difference = (dest.coordinates.y_axis - self.tile.coordinates.y_axis).abs
-			unless (((x_difference - y_difference).abs == 1) && (x_difference + y_difference == 3))
-				destinations.delete(dest)
+			if (x_difference == 1 && y_difference == 2) || (x_difference == 2 && y_difference == 1)
+				valid_destinations.push(dest)
 			end
 		end
-		return destinations
+		return valid_destinations
 	end
 end
 
@@ -548,17 +550,18 @@ class King < Piece
 		end
 	end
 	def criteria
-		destinations = self.boardstate.tiles.dup
-		destinations.each do |dest|
+		valid_destinations = []
+		candidate_destinations = self.game.boardstate.tiles.dup
+		candidate_destinations.each do |dest|
 			x_diff = (dest.coordinates.x_axis - self.tile.coordinates.x_axis).abs
 			y_diff = (dest.coordinates.y_axis - self.coordinates.y_axis).abs
-			x_one_or_zero = (x_diff == 1 || x_diff == 0)
-			y_one_or_zero = (y_diff == 1 || y_diff == 0)
-			unless x_one_or_zero && y_one_or_zero && dest != self.tile
-				destinations.delete(dest)
+			x_one_or_zero = ((x_diff == 1) || (x_diff == 0))
+			y_one_or_zero = ((y_diff == 1) || (y_diff == 0))
+			if x_one_or_zero && y_one_or_zero && dest != self.tile
+				valid_destinations.push(dest)
 			end
 		end
-		return destinations
+		return valid_destinations
 	end
 	def castle_destination(rook_departure)
 		#where will this piece end up if it castles?
@@ -613,7 +616,7 @@ class Pawn < Piece
 		tile.coordinates.y_axis == self.coordinates.y_axis + self.orientation &&
 		tile.coordinates.x_axis == self.coordinates.x_axis + 1
 		}
-		taken = dest.occupied_piece
+		taken = dest.occupied_piece if !!dest
 		destinations.push(dest) unless !dest || !taken || taken.team == self.team
 		dest
 	end
@@ -622,19 +625,18 @@ class Pawn < Piece
 		tile.coordinates.y_axis == self.coordinates.y_axis + self.orientation &&
 		tile.coordinates.x_axis == self.coordinates.x_axis - 1
 		}
-		taken = dest.occupied_piece
+		taken = dest.occupied_piece if !!dest
 		destinations.push(dest) unless !dest || !taken || taken.team == self.team
 		dest
 	end
-	end
 	def right_adjacent
-		return self.simlevel.tiles.find {|tile|
+		self.simlevel.tiles.find {|tile|
 		tile.coordinates.y_axis == self.coordinates.y_axis &&
 		tile.coordinates.x_axis == self.coordinates.x_axis + 1
 	}
 	end
 	def left_adjacent
-		return self.simlevel.tiles.find {|tile|
+		self.simlevel.tiles.find {|tile|
 		tile.coordinates.y_axis == self.coordinates.y_axis &&
 		tile.coordinates.x_axis == self.coordinates.x_axis - 1
 	}
@@ -676,12 +678,12 @@ class Pawn < Piece
 		if !!r_pass
 			en_passant_move = Move.new(self.game, self.tile, r_pass)
 			en_passant_move.taken = self.right_adjacent.occupied_piece
-			self.boardstate.movelist.push(en_passant_move)
+			self.game.boardstate.movelist.push(en_passant_move)
 		elsif !!l_pass # there can only be one en passant move, because the
 			# destination of an en passant move is relative to the last move
 			en_passant_move = Move.new(self.game, self.tile, l_pass)
 			en_passant_move.taken = self.left_adjacent.occupied_piece
-			self.boardstate.movelist.push(en_passant_move)
+			self.game.boardstate.movelist.push(en_passant_move)
 		end
 	end
 	def criteria
@@ -1099,8 +1101,12 @@ def generate_valid_moves(boardstate) #returns a list of every possible valid mov
 		# messing with moves that don't belong to that piece
 		destinations = piece.criteria
 		destinations.each do |destination|
-			move = Move.new(boardstate.game, piece.tile, destination)
-			boardstate.movelist.push(move)
+			if destination.occupied_piece && destination.occupied_piece.team == piece.team
+				next
+			else
+				move = Move.new(boardstate.game, piece.tile, destination)
+				boardstate.movelist.push(move)
+			end
 		end
 		nonself_moves_after = boardstate.movelist.select {|move| move.piece != piece}
 		unless nonself_moves_before == nonself_moves_after
@@ -1159,7 +1165,9 @@ def start_new_game #unfinished, need to add protocols for ending the game (updat
 end
 
 def turn_prompt(boardstate)
-	if boardstate.movelist.find {|move| move.ally_check == false} == nil
+	available_move = boardstate.movelist.find {|move| move.ally_check == false}
+	last_move = boardstate.game.history.last
+	if !!available_move && !!last_move && boardstate.game.history.last.enemy_check
 		if boardstate.game.history.last.enemy_check == true
 			game_over(game, "checkmate")
 		elsif boardstate.game.history.last.enemy_check == false
@@ -1212,7 +1220,7 @@ def turn_prompt(boardstate)
 							can_castle = true
 						end
 						response = gets.chomp.upcase
-						if ((!response.casecmp("castle")) && (can_castle == true))
+						if ((!response.casecmp("castle")) && (can_castle? == true))
 							departure.occupied_piece.castle
 						elsif tiles.any? {|tile| tile.coordinates.name == response} == false
 							board_display(boardstate.game.board)
