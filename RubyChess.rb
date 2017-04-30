@@ -390,6 +390,7 @@ class Piece
 		@depth = depth
 		@color = color
 		@coordinates = $coordinates.find {|coordinate| coordinate.name == tilename.upcase}
+		raise unless @coordinates.is_a?(Coordinates)
 		@title = color + " " + self.class.to_s.downcase
 		@serial = serial
 		@name = color + "_" + self.class.to_s + "_" + serial.to_s
@@ -543,7 +544,7 @@ class Rook < Piece
 		elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
 			game_over(move, stalemate)
 		end
-		move.game.boardstate.display
+		# move.game.boardstate.display
 		if (move.enemy_check == true)
 			puts "#{move.enemy.capitalize}'s king is in check!"
 		end
@@ -630,7 +631,7 @@ class Pawn < Piece
 			tile.coordinates.y_axis == self.coordinates.y_axis + self.orientation &&
 			tile.coordinates.x_axis == self.coordinates.x_axis
 		}
-		unless !dest || !!dest.occupied_piece
+		unless !dest || dest.occupied_piece
 			destinations.push(dest)
 			return true
 		end
@@ -729,45 +730,42 @@ class Pawn < Piece
 		self.add_passant_moves(r_pass, l_pass)
 		return destinations
 	end
+	def promotion_conditions(move)
+		if [1, 8].include?(move.destination.coordinates.y_axis) &&
+			move.moving_team.player.name == "AI"
+			self.promote("random")
+		elsif [1, 8].include?(move.destination.coordinates.y_axis)
+			self.promotion_prompt
+		end
+	end
 	def promotion_prompt
-		promotion = nil
-		until valid_response == true
+		loop do
 			puts "What would you like to promote your pawn to?"
-			promotion = gets.chomp.downcase
-			# replacement = nil
-			# commented out the above line because I can't remember what it's for
-			valid_responses = ["queen", "knight", "bishop", "rook"]
-			if valid_responses.include?(promotion)
-				break
-			elsif promotion == "king"
-				puts "Sorry, there can only be one king."
-			elsif promotion == "pawn"
-				puts "Sorry, you can't promote to a pawn."
-			else
-				puts "Sorry, I didn't understand that."
-			end
-		end
-		return promotion
-	end
-	def create_replacement(promotion)
-		if promotion == "queen"
-			return Queen.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.is_a?(Queen)}).count) + 1), self.depth)
-		elsif promotion == "knight"
-			return Knight.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.is_a?(Knight)}).count) + 1), self.depth)
-		elsif promotion == "bishop"
-			return Bishop.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.is_a?(Bishop)}).count) + 1), self.depth)
-		elsif promotion == "rook"
-			return Rook.new(self.team, self.tile.name, (((self.simlevel.pieces.select {|piece| piece.is_a?(Rook)}).count) + 1), self.depth)
+			response = gets.chomp.capitalize
+			break unless self.promote(response)
+			self.promotion_error_message(response)
 		end
 	end
-	def promote(promotion)
-		if promotion == "random"
-			promotion = ["queen", "knight", "bishop", "rook"].sample
-		end
-		replacement = self.create_replacement(promotion)
+	PROMO_KLASSES = [Queen, Knight, Bishop, Rook]
+	def promote(response)
+		promo_klass = PROMO_KLASSES.find {|klass| klass.to_s == response.capitalize}
+		promo_klass = PROMO_KLASSES.sample if response == "Random"
+		return nil unless promo_klass
+		klassmates = self.simlevel.pieces.select {|piece| piece.is_a?(promo_klass)}
+		serial = klassmates.count + 1
+		replacement = promo_klass.new(self.team, self.tile.name, serial, self.depth)
 		self.tile.occupied_piece = replacement
-		replacement.moved = true
 		self.coordinates = nil
+		replacement.moved = true
+	end
+	def promotion_error_message(response)
+		if response == "king"
+			puts "Sorry, there can only be one king."
+		elsif response == "pawn"
+			puts "Sorry, you can't promote to a pawn."
+		else
+			puts "Sorry, I didn't understand that."
+		end
 	end
 end
 
@@ -853,6 +851,8 @@ class Team
 			return self.game.black_team
 		elsif self.color == "black"
 			return self.game.white_team
+		else
+			raise "invalid team color"
 		end
 	end
 end
@@ -872,14 +872,14 @@ class Move
 	attr_accessor :departure, :piece, :destination, :taken, :team, :enemy, :turn,
 	:extras, :game_end, :snapshot, :previous_turn, :following_turn, :game,
 	:ally_check_cache, :enemy_check_cache, :first_move, :simlevel
-	def initialize(game, departure, destination) #set taken to nil if no piece is taken
+	def initialize(game, departure, destination)
 		@game = game
 		@departure = departure #the tile the moving piece is leaving from
 		@piece = departure.occupied_piece
 		@team = @piece.team
 		@simlevel = @game.simlevels.find {|level| level.depth == @piece.depth}
 		@destination = destination #the tile the moving piece is arriving at
-		@taken = nil
+		@taken = nil # set taken to nil if no piece is taken
 		unless @destination == "castle"
 			@taken = destination.occupied_piece
 		end
@@ -921,7 +921,7 @@ class Move
 	end
 	def ally_check_detect
 		outcome = self.simulate_outcome
-		generate_valid_moves(outcome) #the problem is here
+		generate_valid_moves(outcome)
 		possible_moves = outcome.movelist
 		if ((possible_moves.empty? == false) && (possible_moves.find {|move| move.taken && move.taken.is_a?(King)} != nil))
 			self.ally_check_cache = true
@@ -965,32 +965,38 @@ class Move
 	def simulate_outcome
 		simstate = (self.game.simlevels.find {|level| (level.depth == self.piece.depth)}).simulate
 		if self.destination == "castle"
-			rook_departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
-			rook_destination = self.piece.castle_dest
-			rook = simstate.pieces.find {|piece| piece.name == self.piece.name}
-			king = simstate.friendly_king
-			king_destination = rook.castle_path.king_dest
-			king_departure = king.tile
-			king_destination.occupied_piece = king
-			king_departure.occupied_piece = nil
-			rook_destination.occupied_piece = rook
-			rook.moved = true
-			rook_departure.occupied_piece = nil
-			king.coordinates = king_destination.coordinates
-			king.moved = true
-			rook.coordinates = rook_destination.coordinates
-			simstate.moving_team = simstate.moving_team.opposite
+			self.simulate_castle(simstate)
 		else
-			destination = simstate.tiles.find {|tile| tile.coordinates == self.destination.coordinates}
-			departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
-			moved_piece = simstate.pieces.find {|piece| piece.name == self.piece.name}
-			moved_piece.coordinates = nil
-			destination.occupied_piece = moved_piece
-			departure.occupied_piece = nil
-			moved_piece.coordinates = destination.coordinates
-			simstate.moving_team = simstate.moving_team.opposite
+			self.simulate_move(simstate)
 		end
-		return simstate
+		simstate
+	end
+	def simulate_castle(simstate)
+		rook_departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
+		rook_destination = self.piece.castle_dest
+		rook = simstate.pieces.find {|piece| piece.name == self.piece.name}
+		king = simstate.friendly_king
+		king_destination = rook.castle_path.king_dest
+		king_departure = king.tile
+		king_destination.occupied_piece = king
+		king_departure.occupied_piece = nil
+		rook_destination.occupied_piece = rook
+		rook.moved = true
+		rook_departure.occupied_piece = nil
+		king.coordinates = king_destination.coordinates
+		king.moved = true
+		rook.coordinates = rook_destination.coordinates
+		simstate.moving_team = simstate.moving_team.opposite
+	end
+	def simulate_move(simstate)
+		destination = simstate.tiles.find {|tile| tile.coordinates == self.destination.coordinates}
+		departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
+		moved_piece = simstate.pieces.find {|piece| piece.name == self.piece.name}
+		moved_piece.coordinates = nil
+		destination.occupied_piece = moved_piece
+		departure.occupied_piece = nil
+		moved_piece.coordinates = destination.coordinates
+		simstate.moving_team = simstate.moving_team.opposite
 	end
 end
 
@@ -998,55 +1004,38 @@ def execute_move(move)
 	move.previous_turn = move.game.history.last
 	move.previous_turn.following_turn = move if move.previous_turn
 	puts "#{move.team.color.capitalize} moves their #{move.piece.class.to_s} from #{move.departure.coordinates.name} to #{move.destination.coordinates.name}."
-	unless move.taken == nil
-		move.taken.tile.occupied_piece = nil
-		move.taken.coordinates = nil
-		puts "#{move.team.color.capitalize}'s #{move.piece.class.to_s} has taken #{move.enemy.color}'s' #{move.taken.class.to_s}"
-	end
-	unless (move.taken != nil) || move.piece.is_a?(Pawn)
-		move.simlevel.fifty_move_counter += 1
-	end
+	take_piece(move) if move.taken
 	move.piece.coordinates = move.destination.coordinates
 	move.destination.occupied_piece = move.piece
 	move.departure.occupied_piece = nil
-	if (move.piece.is_a?(Pawn) && ((move.destination.coordinates.y_axis == 8) || (move.destination.coordinates.y_axis == 1)))
-		if move.moving_team.player.name == "AI"
-			piece.promote("random")
-		else
-			piece.promote(piece.promotion_prompt)
-		end
+	if (move.piece.is_a?(Pawn) && [1, 8].include?(move.destination.coordinates.y_axis))
+		move.piece.promotion_conditions(move)
 	end
 	move.game.history.push(move) #reminder: should this happen before or after game over?
 	move.simlevel.turn_counter += 1
 	move.piece.moved = true
 	move.simlevel.moving_team = move.team.opposite
 	move.snapshot = Snapshot.new(move.simlevel)
-	generate_valid_moves(move.simlevel)
-	if (move.enemy_check == true) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
-		game_over(move, checkmate)
-	elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
-		game_over(move, stalemate)
-	end
-	if move.simlevel.fifty_move_counter == 50
-		game_over(move, "fifty moves")
-	end
+	mate_detect(move)
 	move.game.boardstate.display
+	three_move_rule(move)
+	fifty_move_rule(move)
 	if (move.enemy_check == true)
 		puts "#{move.enemy.capitalize}'s king is in check!"
 	end
-	if move.simlevel.fifty_move_counter == 20
-		puts "It has been 20 moves since a pawn has been moved or a pieces has been taken."
-		puts "If no piece is captured or pawn moved in the next 30 turns, the game will end\nin a draw."
-	elsif move.simlevel.fifty_move_counter == 30
-		puts "It has been 30 moves since a pawn has been moved or a pieces has been taken."
-		puts "If no piece is captured or pawn moved in the next 20 turns, the game will end\nin a draw."
-	elsif move.simlevel.fifty_move_counter == 40
-		puts "It has been 40 moves since a pawn has been moved or a pieces has been taken."
-		puts "If no piece is captured or pawn moved in the next 10 turns, the game will end\nin a draw."
-	elsif move.simlevel.fifty_move_counter == 45
-		puts "It has been 45 moves since a pawn has been moved or a pieces has been taken."
-		puts "If no piece is captured or pawn moved in the next 5 turns, the game will end\nin a draw."
+end
+
+def mate_detect(move)
+	generate_valid_moves(move.simlevel)
+	valid_move = move.simlevel.movelist.find {|found_move| !found_move.ally_check}
+	if move.enemy_check && !valid_move # aka checkmate
+		game_over(move, "checkmate")
+	elsif !valid_move # aka stalemate
+		game_over(move, "stalemate")
 	end
+end
+
+def three_move_rule(move)
 	identical_moves = move.game.history.select {|past_move| (past_move.snapshot == move.snapshot)}
 	if identical_moves.count == 2
 		puts "The board has already been in this state before. If this happens\nagain, the game will result in a draw."
@@ -1054,6 +1043,26 @@ def execute_move(move)
 		puts "The board has been in this state three times. The game ends in a draw."
 		game_over("three moves")
 	end
+end
+
+def fifty_move_rule(move)
+	# reminder: this should allow either player to declare a draw rather than force one on both of them
+	fmc = move.simlevel.fifty_move_counter
+	fmc += 1 unless move.taken || move.piece.is_a?(Pawn)
+	if fmc == 50
+		game_over(move, "fifty moves")
+	elsif fmc > 19 && (fmc % 10 == 0) || (50 - fmc < 10)
+		puts "It has been #{fmc.to_s} moves since a pawn has been"
+		puts "moved or a piece has been taken."
+		puts "If no piece is captured or pawn moved in the next"
+		puts "#{(50 - fmc).to_s} turns, the game will end in a draw."
+	end
+end
+
+def take_piece(move)
+	move.taken.tile.occupied_piece = nil
+	move.taken.coordinates = nil
+	puts "#{move.team.color.capitalize}'s #{move.piece.class.to_s} has taken #{move.enemy.color}'s' #{move.taken.class.to_s}"
 end
 
 def board_create #generates all 64 tiles of the board
@@ -1219,18 +1228,6 @@ def player_name_prompt
 	end
 end
 
-def mate_detect(boardstate)
-	available_move = boardstate.movelist.find {|move| move.ally_check == false}
-	last_move = boardstate.game.history.last
-	if !!available_move && !!last_move && boardstate.game.history.last.enemy_check
-		if boardstate.game.history.last.enemy_check == true
-			return "checkmate"
-		elsif boardstate.game.history.last.enemy_check == false
-			return "stalemate"
-		end
-	end
-end
-
 def ai_move(boardstate)
 	movelist = boardstate.movelist.select {|move| move.ally_check == false}
 	move = movelist.sample
@@ -1238,7 +1235,7 @@ def ai_move(boardstate)
 end
 
 def human_move(boardstate, response, movelist)
-	departure = tiles.find {|tile| tile.coordinates.name == response}
+	departure = boardstate.tiles.find {|tile| tile.coordinates.name == response}
 	if departure
 		movelist.select! {|found_move| found_move.departure.coordinates.name == response} #the list of possible moves will now only contain moves from the specified tile
 		destination_prompt(boardstate, departure, movelist)
@@ -1252,7 +1249,7 @@ def empty_movelist_message(boardstate, departure)
 	boardstate.display
 	if departure.occupied_piece == nil
 		puts "Sorry, that tile is unoccupied."
-	elsif departure.occupied_piece.team != moving_team
+	elsif departure.occupied_piece.team != boardstate.moving_team
 		puts "Sorry, the piece belongs to the other player."
 	else
 		puts "Sorry, that piece has no valid moves."
@@ -1262,10 +1259,10 @@ end
 def normal_move(boardstate, departure, movelist, response)
 	destination = boardstate.tiles.find {|tile| tile.coordinates.name == response}
 	move = movelist.find {|found_move| found_move.destination.coordinates.name == response}
-	if (move == nil) && ((destination.occupied_piece == nil) || (destination.occupied_piece.team != moving_team))
+	if (move == nil) && ((destination.occupied_piece == nil) || (destination.occupied_piece.team != boardstate.moving_team))
 		boardstate.display
 		puts "Sorry, that's not a valid move for that piece."
-	elsif ((move.destination.occupied_piece != nil) && (move.destination.occupied_piece.team == moving_team))
+	elsif ((move.destination.occupied_piece != nil) && (move.destination.occupied_piece.team == boardstate.moving_team))
 		puts "Sorry, that tile is already occupied by a friendly piece."
 		boardstate.display
 	elsif move.ally_check == true
@@ -1302,7 +1299,7 @@ def human_turn_prompt(boardstate)
 	loop do
 		boardstate.display
 		movelist = boardstate.movelist.dup
-		puts "It is #{moving_team.player.name}'s turn."
+		puts "It is #{boardstate.moving_team.player.name}'s turn."
 		puts "What is the coordinate of the piece I should move?"
 		puts %Q(Please reply in the form of a coordinate, e.g. "B2".)
 		puts %Q(You can also enter "surrender" to surrender, "draw" to agree to a draw,\n"move history" to view move history, or "exit" to exit\nthe game with or without saving.)
@@ -1310,6 +1307,7 @@ def human_turn_prompt(boardstate)
 		response = gets.chomp.upcase
 		if (response.length == 2)
 			human_move(boardstate, response, movelist)
+			break
 		elsif response == "move history"
 			move_history_prompt #unfinished: add this
 			boardstate.display
@@ -1317,6 +1315,7 @@ def human_turn_prompt(boardstate)
 			game_over(nil, "surrender") #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
 		elsif response == "draw"
 			draw_prompt
+			break # reminder: this just causes human)_turn_prompt to be called again
 		elsif response == "exit"
 			boardstate.game.exit_game #reminder: make this
 		else
@@ -1341,12 +1340,10 @@ def draw_prompt
 end
 
 def turn_prompt(boardstate)
-	any_mate = mate_detect(boardstate)
-	game_over(any_mate) if any_mate
 	moving_player_name = boardstate.moving_team.player.name
-	if moving_player_name == "AI"
+	if moving_player_name.upcase == "AI"
 		ai_move(boardstate)
-		puts "AI move: #{moving_player_name}"
+		puts "AI move: #{moving_player_name}" # delete later
 	else
 		human_turn_prompt(boardstate)
 	end
