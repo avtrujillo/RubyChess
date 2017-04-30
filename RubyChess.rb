@@ -148,6 +148,9 @@ class Boardstate #redundant, but makes things easier to read
 		@game_over = false #reminder: do we need this? If so, should it be moved to game instead?
 		@movelist = [] #list of all possible valid moves for the next turn
 	end
+	def active_pieces # pieces that have not been taken
+		pieces.select {|piece| piece.coordinates} # taken pieces have nil coordinates
+	end
 	def friendly_king
 		if self.moving_team == self.game.white_team
 			return self.white_king
@@ -992,7 +995,7 @@ class Move
 		destination = simstate.tiles.find {|tile| tile.coordinates == self.destination.coordinates}
 		departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
 		moved_piece = simstate.pieces.find {|piece| piece.name == self.piece.name}
-		moved_piece.coordinates = nil
+		destination.occupied_piece.coordinates = nil if destination.occupied_piece
 		destination.occupied_piece = moved_piece
 		departure.occupied_piece = nil
 		moved_piece.coordinates = destination.coordinates
@@ -1145,7 +1148,9 @@ end
 
 def generate_valid_moves(boardstate) #returns a list of every possible valid move for a given turn from an array of tiles
 	boardstate.movelist = [] #this is a list of all valid moves for the given state of the board, will be returned at the end
-	mover_pieces = boardstate.pieces.select {|piece| piece.team == boardstate.moving_team}
+	mover_pieces = boardstate.active_pieces.select {|piece|
+		piece.team == boardstate.moving_team
+	}
 	mover_pieces.each do |piece|
 		nonself_moves_before = boardstate.movelist.select {|move| move.piece != piece}
 		# we need to have a record so that we know if a piece's criteria is
