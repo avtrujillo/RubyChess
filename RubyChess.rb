@@ -26,7 +26,7 @@ def negquery
 			negdone = true
 		elsif response.downcase == "no"
 			$neg_display = !$neg_display
-			board = board_create(nil) #note: got rid of board_fill because there was no game to use as an argument and we don't need the board to be filled anyway
+			board = board_create(nil)
 			Boardstate.new(nil, board_create, nil).display
 			"How about now?"
 		else
@@ -67,13 +67,12 @@ class Game
 		@black_player = black_player
 		@black_team = Team.new("black", @black_player, self)
 		@white_team = Team.new("white", @white_player, self)
-		@pieces = starting_pieces(self)
+		@pieces = self.create_starting_pieces
 		@board = board_create(self) #the "board" attribute is a two-dimensional array of all tiles that is only used in the board_display function
 		@tiles = @board.flatten
-		board_fill(@board, @pieces)
-		@moving_team = @white_team
 		@simlevels = []
 		@boardstate = Boardstate.new(self, @board, @pieces, 0)
+		@boardstate.moving_team = @white_team
 		@simlevels.push(self.boardstate)
 		@simlevels.push(Simlevel.new(self, [[]], 0))
 		@simlevels.push(Simlevel.new(self, [[]], -1))
@@ -81,6 +80,9 @@ class Game
 		@history = []
 		#gonna try moving the line commented out below to game.play
 		#@boardstate.movelist = generate_valid_moves(@boardstate)
+	end
+	def moving_team
+		self.simlevels.first.moving_team
 	end
 	def play
 		generate_valid_moves(@boardstate)
@@ -110,6 +112,41 @@ class Game
 		end
 		$playing = false
 	end
+	def create_starting_pieces #returns an array of all pieces in their starting postions
+		pieces = [
+		Rook.new("white", "A1", 1, self, 0),
+		Knight.new("white", "B1", 1, self, 0),
+		Bishop.new("white", "C1", 1, self, 0),
+		Queen.new("white", "D1", 1, self, 0),
+		King.new("white", "E1", 1, self, 0),
+		Bishop.new("white", "F1", 2, self, 0),
+		Knight.new("white", "G1", 2, self, 0),
+		Rook.new("white", "H1", 2, self, 0),
+		Pawn.new("white", "A2", 1, self, 0),
+		Pawn.new("white", "B2", 2, self, 0),
+		Pawn.new("white", "C2", 3, self, 0),
+		Pawn.new("white", "D2", 4, self, 0),
+		Pawn.new("white", "E2", 5, self, 0),
+		Pawn.new("white", "F2", 6, self, 0),
+		Pawn.new("white", "G2", 7, self, 0),
+		Pawn.new("white", "H2", 8, self, 0),
+		Rook.new("black", "A8", 1, self, 0),
+		Knight.new("black", "B8", 1, self, 0),
+		Bishop.new("black", "C8", 1, self, 0),
+		Queen.new("black", "D8", 1, self, 0),
+		King.new("black", "E8", 1, self, 0),
+		Bishop.new("black", "F8", 2, self, 0),
+		Knight.new("black", "G8", 2, self, 0),
+		Rook.new("black", "H8", 2, self, 0),
+		Pawn.new("black", "A7", 1, self, 0),
+		Pawn.new("black", "B7", 2, self, 0),
+		Pawn.new("black", "C7", 3, self, 0),
+		Pawn.new("black", "D7", 4, self, 0),
+		Pawn.new("black", "E7", 5, self, 0),
+		Pawn.new("black", "F7", 6, self, 0),
+		Pawn.new("black", "G7", 7, self, 0),
+		Pawn.new("black", "H7", 8, self, 0) ]
+	end
 end
 
 class Snapshot
@@ -133,7 +170,8 @@ class Snapshot
 end
 
 class Boardstate #redundant, but makes things easier to read
-	attr_accessor :game, :tiles, :board, :board, :pieces, :depth, :turn_counter, :white_king, :black_king, :moving_team, :fifty_move_counter, :game_over, :movelist
+	attr_accessor :game, :tiles, :board, :board, :pieces, :depth, :turn_counter,
+	:moving_team, :fifty_move_counter, :game_over, :movelist
 	def initialize(game, board, pieces, depth = 0)
 		@game = game
 		@board = board
@@ -141,12 +179,15 @@ class Boardstate #redundant, but makes things easier to read
 		@pieces = pieces
 		@depth = depth
 		@turn_counter = 0
-		@white_king = @pieces.find {|piece| piece.title == "white king"} if @pieces
-		@black_king = @pieces.find {|piece| piece.title == "black king"} if @pieces
-		@moving_team = @game.moving_team if @game
 		@fifty_move_counter = 0
 		@game_over = false #reminder: do we need this? If so, should it be moved to game instead?
 		@movelist = [] #list of all possible valid moves for the next turn
+	end
+	def white_king
+		self.pieces.find {|piece| piece.title == "white king"}
+	end
+	def black_king
+		self.pieces.find {|piece| piece.title == "black king"}
 	end
 	def active_pieces # pieces that have not been taken
 		pieces.select {|piece| piece.coordinates} # taken pieces have nil coordinates
@@ -170,7 +211,7 @@ class Boardstate #redundant, but makes things easier to read
 	end
 	def simulate
 		deeper = Simlevel.new(self.game, self.board, self.depth)
-		if ((self.game.simlevels.count < (self.depth.abs + 2)) && (self.game.simlevels.count >= 3))
+		if self.game.simlevels.count < self.depth.abs + 2 && self.game.simlevels.count >= 3
 			self.game.simlevels.push(deeper)
 		elsif self.game.simlevels.count >= (self.depth.abs + 2)
 			self.game.simlevels[self.depth.abs + 1] = deeper
@@ -217,6 +258,7 @@ end
 class Simlevel < Boardstate #used for check_detect and checkmate_detect
 	def initialize(game, superboard = [], superdepth) #the "super" prefix means that something is from the level above the one being created
 		@game = game
+		@depth = (superdepth - 1) #how many levels of simulation deep are we?
 		@board = []
 		@pieces = []
 		superboard.each do |superrow|
@@ -231,10 +273,9 @@ class Simlevel < Boardstate #used for check_detect and checkmate_detect
 			@board.push(row)
 		end
 		@tiles = board.flatten
-		@moving_team = @game.moving_team
+		@moving_team = self.wake_up.moving_team
 		@white_king = @pieces.find {|piece| piece.title == "white king"}
 		@black_king = @pieces.find {|piece| piece.title == "black king"}
-		@depth = (superdepth - 1) #how many levels of simulation deep are we?
 		@turn_counter = game.boardstate.turn_counter
 		@fifty_move_counter = game.simlevels[superdepth].fifty_move_counter
 		@game_over = false
@@ -392,11 +433,19 @@ class Piece
 	def initialize(color, tilename, serial, game, depth = 0)
 		@depth = depth
 		@color = color
-		@coordinates = $coordinates.find {|coordinate|
-			coordinate.name == tilename.upcase}
-		@serial = serial
 		@game = game
+		@coordinates = $coordinates.find {|coor| coor.name == tilename.upcase}
+		self.clear_tile if @game && @game.simlevels && self.tile
+		@serial = serial
 		@moved = false
+	end
+	def clear_tile
+		current_occupants = self.simlevel.pieces.select {|piece|
+			piece.coordinates == self.coordinates
+		}
+		current_occupants.each do |piece|
+			piece.coordinates = nil
+		end
 	end
 	def title
 		color + " " + self.class.to_s.downcase
@@ -479,6 +528,17 @@ class Piece
 		sw_path = Path.new(self, "SW")
 		nw_path.tiles + ne_path.tiles + se_path.tiles + sw_path.tiles
 	end
+	def move_to(dest) # can accept a string, tile, or coordinates
+		if dest.is_a?(String)
+			dest = simlevel.tiles.find {|tile| tile.coordinates.name == dest}
+		elsif dest.is_a?(Coordinates)
+			dest = simlevel.tiles.find {|tile| tile.coordinates == dest}
+		end
+		raise "Not a valid destination" unless dest.is_a?(Tile)
+		dest.occupied_piece.coordinates = nil if dest.occupied_piece
+		self.coordinates = dest.coordinates
+		self.moved = true
+	end
 end
 
 
@@ -532,11 +592,11 @@ class Rook < Piece
 		move.previous_turn = move.game.history.last
 		move.previous_turn.following_turn = move
 		puts "#{move.team.color.capitalize} castles from #{move.departure.cordinates.name}."
-		move.piece.coordinates = destination.coordinates
+		move.piece.move_to(destination.coordinates)
 		king = move.simlevel.king
 		king_destination = self.castle_path.king_dest
 		king_departure = king.tile # reminder: do we need this?
-		king.coordinates = king_destination.coordinates
+		king.move_to(king_destination.coordinates)
 		move.game.history.push(move) #reminder: should this happen before or after game over?
 		move.simlevel.turn_counter += 1
 		move.piece.moved = true
@@ -784,9 +844,7 @@ class Tile
 	end
 	def occupied_piece
 		if self.game
-			return self.boardstate.pieces.find {|piece|
-				piece.coordinates == self.coordinates
-			}
+			self.boardstate.pieces.find {|piece| piece.coordinates == self.coordinates}
 		else
 			return nil
 		end
@@ -971,26 +1029,19 @@ class Move
 		simstate
 	end
 	def simulate_castle(simstate)
-		rook_departure = simstate.tiles.find {|tile| tile.coordinates == self.departure.coordinates}
-		rook_destination = self.piece.castle_dest
 		rook = simstate.pieces.find {|piece| piece.name == self.piece.name}
+		rook_destination = self.piece.castle_dest
+		raise unless rook.is_a?(Rook)
 		king = simstate.friendly_king
 		king_destination = rook.castle_path.king_dest
-		king_departure = king.tile
-		rook.moved = true
-		king.coordinates = king_destination.coordinates
-		king.moved = true
-		rook.coordinates = rook_destination.coordinates
+		raise unless king.is_a?(King)
+		king.move_to(king_destination.coordinates)
+		rook.move_to(rook_destination.coordinates)
 		simstate.moving_team = simstate.moving_team.opposite
 	end
 	def simulate_move(simstate)
-		destination = simstate.tiles.find {|tile| tile.coordinates == self.destination.coordinates}
 		moved_piece = simstate.pieces.find {|piece| piece.name == self.piece.name}
-		if self.taken
-			taken_piece = simstate.pieces.find {|piece| piece.name == self.taken.name}
-			taken_piece.coordinates = nil
-		end
-		moved_piece.coordinates = destination.coordinates
+		moved_piece.move_to(self.destination.coordinates)
 		simstate.moving_team = simstate.moving_team.opposite
 	end
 end
@@ -999,15 +1050,15 @@ def execute_move(move)
 	move.previous_turn = move.game.history.last
 	move.previous_turn.following_turn = move if move.previous_turn
 	puts "#{move.team.color.upcase} moves their #{move.piece.class.to_s} from #{move.departure.coordinates.name} to #{move.destination.coordinates.name}."
-	take_piece(move) if move.taken
-	move.piece.coordinates = move.destination.coordinates
+	puts "#{move.team.color.capitalize}'s #{move.piece.class.to_s} has taken #{move.enemy.color}'s' #{move.taken.class.to_s}" if move.taken
+	move.piece.move_to(move.destination)
 	if (move.piece.is_a?(Pawn) && [1, 8].include?(move.destination.coordinates.y_axis))
 		move.piece.promotion_conditions(move)
 	end
 	move.game.history.push(move) #reminder: should this happen before or after game over?
 	move.simlevel.turn_counter += 1
 	move.piece.moved = true
-	move.simlevel.moving_team = move.team.opposite
+	move.simlevel.moving_team = move.simlevel.moving_team.opposite
 	move.snapshot = Snapshot.new(move.simlevel)
 	mate_detect(move)
 	move.game.boardstate.display
@@ -1052,11 +1103,6 @@ def fifty_move_rule(move)
 	end
 end
 
-def take_piece(move) # reminder: is this redundant?
-	move.taken.coordinates = nil
-	puts "#{move.team.color.capitalize}'s #{move.piece.class.to_s} has taken #{move.enemy.color}'s' #{move.taken.class.to_s}"
-end
-
 def board_create(game = nil) #generates all 64 tiles of the board
 	board = []
 	for x in (1..8) # makes an array for each row of tiles
@@ -1093,48 +1139,6 @@ def test_protocol(movelist) #debugging tool
 	end
 end
 
-def starting_pieces(game) #returns an array of all pieces in their starting postions
-	pieces = [
-	Rook.new("white", "A1", 1, game, 0),
-	Knight.new("white", "B1", 1, game, 0),
-	Bishop.new("white", "C1", 1, game, 0),
-	Queen.new("white", "D1", 1, game, 0),
-	King.new("white", "E1", 1, game, 0),
-	Bishop.new("white", "F1", 2, game, 0),
-	Knight.new("white", "G1", 2, game, 0),
-	Rook.new("white", "H1", 2, game, 0),
-	Pawn.new("white", "A2", 1, game, 0),
-	Pawn.new("white", "B2", 2, game, 0),
-	Pawn.new("white", "C2", 3, game, 0),
-	Pawn.new("white", "D2", 4, game, 0),
-	Pawn.new("white", "E2", 5, game, 0),
-	Pawn.new("white", "F2", 6, game, 0),
-	Pawn.new("white", "G2", 7, game, 0),
-	Pawn.new("white", "H2", 8, game, 0),
-	Rook.new("black", "A8", 1, game, 0),
-	Knight.new("black", "B8", 1, game, 0),
-	Bishop.new("black", "C8", 1, game, 0),
-	Queen.new("black", "D8", 1, game, 0),
-	King.new("black", "E8", 1, game, 0),
-	Bishop.new("black", "F8", 2, game, 0),
-	Knight.new("black", "G8", 2, game, 0),
-	Rook.new("black", "H8", 2, game, 0),
-	Pawn.new("black", "A7", 1, game, 0),
-	Pawn.new("black", "B7", 2, game, 0),
-	Pawn.new("black", "C7", 3, game, 0),
-	Pawn.new("black", "D7", 4, game, 0),
-	Pawn.new("black", "E7", 5, game, 0),
-	Pawn.new("black", "F7", 6, game, 0),
-	Pawn.new("black", "G7", 7, game, 0),
-	Pawn.new("black", "H7", 8, game, 0) ]
-end
-
-def board_fill(board, pieces) #reminder: I don't think we need this anymore
-#	board.flatten.each do |tile|
-#		tile.occupied_piece = pieces.find {|piece| piece.coordinates == tile.coordinates}
-#	end
-end
-
 def generate_valid_moves(boardstate) #returns a list of every possible valid move for a given turn from an array of tiles
 	boardstate.movelist = [] #this is a list of all valid moves for the given state of the board, will be returned at the end
 	mover_pieces = boardstate.active_pieces.select {|piece|
@@ -1155,14 +1159,14 @@ def generate_valid_moves(boardstate) #returns a list of every possible valid mov
 		end
 		nonself_moves_after = boardstate.movelist.select {|move| move.piece != piece}
 		unless nonself_moves_before == nonself_moves_after
-			puts "piece.tile = #{piece.tile.name}, #{piece.depth.to_s} piece.name = #{piece.name}"
+			puts "piece.tile = #{piece.tile.name}, #{piece.depth.to_s} piece.name = #{piece.name} #{piece.simlevel.object_id}"
 			puts "added:"
 			(nonself_moves_after - nonself_moves_before).each do |move|
-				puts "#{move.piece.name} #{move.piece.depth.to_s} #{move.departure.name} #{move.destination.name}"
+				puts "#{move.piece.name} #{move.piece.depth.to_s} #{move.departure.name} #{move.destination.name}  #{move.simlevel.object_id}"
 			end
 			puts "removed:"
 			(nonself_moves_before- nonself_moves_after).each do |move|
-				puts "#{move.piece.name} #{move.departure.name} #{move.destination.name}"
+				puts "#{move.piece.name} #{move.departure.name} #{move.destination.name}, #{move.simlevel.object_id}"
 			end
 			raise "#{piece.name} is adding or deleting other pieces' moves"
 			# each piece's criteria should be deleting any invalid moves that move
