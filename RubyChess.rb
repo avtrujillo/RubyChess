@@ -35,33 +35,39 @@ def negquery
 	end
 end
 
-def x_to_letter(x_axis) #converts x coordinates to letters
-	$alph = ["taken", "A", "B", "C", "D", "E", "F", "G", "H"] # used to translate between letter and row number
-	letter = $alph[x_axis]
-	return letter
+class Coordinates
+	attr_accessor :x_axis, :y_axis, :letter, :name
+	def initialize(text)
+		@letter = text.chop.upcase #isolates the letter in the coordinates
+		@y_axis = text.reverse.chop.to_i #isolates the y-coordinate
+		@x_axis = self.class.letter_to_x(@letter) #changes the letter to a row number
+		@name = text
+		$coordinates.push(self)
+	end
+	ALPH = alph = ["taken", "A", "B", "C", "D", "E", "F", "G", "H"]# used to translate between letter and row number
+	def self.x_to_letter(x_coordinate) #converts x coordinates to letters
+		ALPH[x_coordinate]
+	end
+	def self.letter_to_x(letter) #converts letters to x coordinates
+		ALPH.index(letter)
+	end
+	def self.alphanum_to_num(text) #for converting e.g. "A1" to "(1, 1)"
+		letter = text.chop.downcase #isolates the letter in the coordinates
+		y_axis = text.reverse.chop.to_i #isolates the y-coordinate
+		x_axis = self.letter_to_x(letter) #translates the letter to an x-coordinate
+		[x_axis, y_axis]
+	end
+	def self.num_to_alphanum(x_axis, y_axis) #for converting e.g. "(1, 1)" to "A1"
+		letter = self.x_to_letter(x_axis) #translates the x-coordinate to a letters
+		letter + y_axis.to_s #combines the letter and y-coordinate to create a single name
+	end
 end
 
-def letter_to_x(letter) #converts letters to x coordinates
-	x_axis = $alph.index(letter)
-	return x_axis
-end
-
-def alphanum_to_num(text) #for converting e.g. "A1" to "(1, 1)"
-	letter = text.chop.downcase #isolates the letter in the coordinates
-	y_axis = text.reverse.chop.to_i #isolates the y-coordinate
-	x_axis = letter_to_x(letter) #translates the letter to an x-coordinate
-	output = [x_axis, y_axis]
-	return output
-end
-
-def num_to_alphanum(x_axis, y_axis) #for converting e.g. "(1, 1)" to "A1"
-	letter = x_to_letter(x_axis) #translates the x-coordinate to a letters
-	alphanum = letter + y_axis.to_s #combines the letter and y-coordinate to create a single name
-	return alphanum
-end
+$coordinates = []
 
 class Game
-	attr_accessor :simlevels, :white_player, :black_player, :white_team, :black_team, :name, :history, :pieces, :board, :tiles, :moving_team, :boardstate
+	attr_accessor :simlevels, :white_player, :black_player, :white_team,
+	:black_team, :name, :history, :pieces, :board, :tiles, :boardstate
 	def initialize(white_player, black_player)
 		@white_player = white_player
 		@black_player = black_player
@@ -311,19 +317,6 @@ def valid_opening?(opening) #for debugging
 	formatted_opening = [opening.departure.coordinates.name, opening.destination.coordinates.name]
 	return $opening_moves.include?(formatted_opening)
 end
-
-class Coordinates
-	attr_accessor :x_axis, :y_axis, :letter, :name
-	def initialize(text)
-		@letter = text.chop.upcase #isolates the letter in the coordinates
-		@y_axis = text.reverse.chop.to_i #isolates the y-coordinate
-		@x_axis = letter_to_x(@letter) #changes the letter to a row number
-		@name = text
-		$coordinates.push(self)
-	end
-end
-
-$coordinates = []
 
 class Path # used to find the possible moves of a rook, bishop, or queen
 	attr_accessor :x_step, :y_step, :piece, :name, :tiles, :x_ori, :y_ori
@@ -833,7 +826,7 @@ end
 class Tile
 	attr_accessor :coordinates, :depth, :game
 	def initialize(x, y, depth = 0, game = nil)
-		alphanum = num_to_alphanum(x, y)
+		alphanum = Coordinates.num_to_alphanum(x, y)
 		@coordinates =  $coordinates.find {|coordinate| coordinate.name == alphanum}
 		@coordinates = Coordinates.new(alphanum) unless @coordinates
 		@depth = depth
