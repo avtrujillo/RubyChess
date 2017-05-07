@@ -47,10 +47,10 @@ class Game
 		@black_team = Team.new("black", @black_player, self)
 		@white_team = Team.new("white", @white_player, self)
 		@pieces = self.create_starting_pieces
-		@board = board_create(self) #the "board" attribute is a two-dimensional array of all tiles that is only used in the board_display function
-		@tiles = @board.flatten
 		@simlevels = []
-		@boardstate = Boardstate.new(self, @board, @pieces, 0)
+		@boardstate = Boardstate.new(self, @pieces, 0)
+		@board = @boardstate.board #the "board" attribute is a two-dimensional array of all tiles that is only used in the board_display function
+		@tiles = @board.flatten
 		@boardstate.moving_team = @white_team
 		@simlevels.push(self.boardstate)
 		@simlevels.push(Simlevel.new(self, [[]], 0))
@@ -151,9 +151,9 @@ end
 class Boardstate #redundant, but makes things easier to read
 	attr_accessor :game, :tiles, :board, :board, :pieces, :depth, :turn_counter,
 	:moving_team, :fifty_move_counter, :game_over, :movelist
-	def initialize(game, board, pieces, depth = 0)
+	def initialize(game, pieces, depth = 0)
 		@game = game
-		@board = board
+		@board = self.board_create(@game)
 		@tiles = board.flatten #remember, these are to reflect only the attributes of the game at the time of creation
 		@pieces = pieces
 		@depth = depth
@@ -161,6 +161,19 @@ class Boardstate #redundant, but makes things easier to read
 		@fifty_move_counter = 0
 		@game_over = false #reminder: do we need this? If so, should it be moved to game instead?
 		@movelist = [] #list of all possible valid moves for the next turn
+	end
+	def board_create(game = nil) #generates all 64 tiles of the board
+		board = []
+		for x in (1..8) # makes an array for each row of tiles
+			board.push([])
+		end
+		board.each do |row| #adds 8 tiles with the appropriate coordinates to each row
+			for x in (1..8)
+				tile = Tile.new(x, (board.index(row) + 1), 0, game)
+				row.push(tile)
+			end
+		end
+		return board
 	end
 	def white_king
 		self.pieces.find {|piece| piece.title == "white king"}
@@ -486,10 +499,8 @@ class Piece
 	end
 	def symbol(color = self.symbol_color)
 		if color == "white"
-			raise if self.class.white_symbol.nil?
 			return self.class.white_symbol
 		else
-			raise if self.class.black_symbol.nil?
 			return self.class.black_symbol
 		end
 	end
@@ -1113,20 +1124,6 @@ class Move
 	end
 end
 
-def board_create(game = nil) #generates all 64 tiles of the board
-	board = []
-	for x in (1..8) # makes an array for each row of tiles
-		board.push([])
-	end
-	board.each do |row| #adds 8 tiles with the appropriate coordinates to each row
-		for x in (1..8)
-			tile = Tile.new(x, (board.index(row) + 1), 0, game)
-			row.push(tile)
-		end
-	end
-	return board
-end
-
 =begin
 
 The board is a two-dimensional array of all tiles that
@@ -1314,7 +1311,7 @@ class MainMenu
 		self.main_menu_prompt
 	end
 	def negquery
-		Boardstate.new(nil, board_create, nil).display
+		Boardstate.new(nil, nil).display
 		negdone = false
 		if self.first_negquery == true
 			puts "Hi, welcome to chess! Before we begin I need your help to set the display.\n"
@@ -1330,8 +1327,7 @@ class MainMenu
 				break
 			elsif response.downcase == "no"
 				$neg_display = !$neg_display
-				board = board_create(nil)
-				Boardstate.new(nil, board_create, nil).display
+				Boardstate.new(nil, nil).display
 				"How about now?"
 			else
 				puts "Sorry, I didn't understand that."
