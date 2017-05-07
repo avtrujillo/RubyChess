@@ -8,33 +8,6 @@ $AI_scoreboard = [0, 0]
 
 $players = []
 
-
-def negquery
-	Boardstate.new(nil, board_create, nil).display
-	negdone = false
-	if $first_negquery == true
-		puts "Hi, welcome to chess! Before we begin I need your help to set the display.\n"
-	end
-	until negdone == true #keeps going until the user is satisfied with the appearance of the display
-		puts "In the above board, does tile A1 appear black to you?\n"
-		response = gets.chomp
-		if response.downcase == "yes"
-			if $first_negquery == true
-				puts "\nGood. Let's get started then."
-				$first_negquery = false
-			end
-			negdone = true
-		elsif response.downcase == "no"
-			$neg_display = !$neg_display
-			board = board_create(nil)
-			Boardstate.new(nil, board_create, nil).display
-			"How about now?"
-		else
-			puts "Sorry, I didn't understand that."
-		end
-	end
-end
-
 class Coordinates
 	attr_accessor :x_axis, :y_axis, :letter, :name
 	def initialize(text)
@@ -44,7 +17,7 @@ class Coordinates
 		@name = text
 		$coordinates.push(self)
 	end
-	ALPH = alph = ["taken", "A", "B", "C", "D", "E", "F", "G", "H"]# used to translate between letter and row number
+	ALPH = ["taken", "A", "B", "C", "D", "E", "F", "G", "H"]# used to translate between letter and row number
 	def self.x_to_letter(x_coordinate) #converts x coordinates to letters
 		ALPH[x_coordinate]
 	end
@@ -91,10 +64,10 @@ class Game
 		self.simlevels.first.moving_team
 	end
 	def play
-		generate_valid_moves(@boardstate)
+		self.boardstate.generate_valid_moves
 		$playing = true #reminder: make sure this updates when ending or saving a game
 		until $playing == false
-			turn_prompt(self.boardstate)
+			TurnMenu.new(self)
 		end
 	end
 	def exit_game
@@ -257,6 +230,59 @@ class Boardstate #redundant, but makes things easier to read
 		puts rowbread + legend.slice!(1).to_s
 		puts rowmeat + legend.slice!(1).to_s
 		puts rowbread + legend.slice!(1).to_s
+	end
+	def generate_valid_moves #returns a list of every possible valid move for a given turn from an array of tiles
+		self.movelist = [] #this is a list of all valid moves for the given state of the board, will be returned at the end
+		mover_pieces = self.active_pieces.select {|piece|
+			piece.team == self.moving_team
+		}
+		mover_pieces.each do |piece|
+			nonself_moves_before = self.movelist.select {|move| move.piece != piece}
+			# we need to have a record so that we know if a piece's criteria is
+			# messing with moves that don't belong to that piece
+			destinations = piece.criteria
+			destinations.each do |destination|
+				if destination.occupied_piece && destination.occupied_piece.team == piece.team
+					next
+				else
+					move = Move.new(self.game, piece.tile, destination)
+					self.movelist.push(move)
+				end
+			end
+			nonself_moves_after = self.movelist.select {|move| move.piece != piece}
+			unless nonself_moves_before == nonself_moves_after
+				puts "piece.tile = #{piece.tile.name}, #{piece.depth.to_s} piece.name = #{piece.name} #{piece.simlevel.object_id}"
+				puts "added:"
+				(nonself_moves_after - nonself_moves_before).each do |move|
+					puts "#{move.piece.name} #{move.piece.depth.to_s} #{move.departure.name} #{move.destination.name}  #{move.simlevel.object_id}"
+				end
+				puts "removed:"
+				(nonself_moves_before- nonself_moves_after).each do |move|
+					puts "#{move.piece.name} #{move.departure.name} #{move.destination.name}, #{move.simlevel.object_id}"
+				end
+				raise "#{piece.name} is adding or deleting other pieces' moves"
+				# each piece's criteria should be deleting any invalid moves that move
+				# that piece, and, in the case of a rook, adding an option to castle if
+				# applicable. If moves that move other pieces get added or removed,
+				# something isn't working correctly.
+			end
+		end
+		self.movelist.each do |move|
+			if move.destination == "castle"
+				#this is only here to avoid calling "castle".destination and getting an error
+			#	puts "#{move.piece.name} castle" #delete later
+			elsif ((move.destination.occupied_piece != nil) && (move.destination.occupied_piece.team == move.piece.team)) ||
+					self.tiles.include?(move.destination) == false ||
+					move.destination == move.departure
+				self.movelist.delete(move)
+			else
+			#	puts "#{move.piece.name} #{move.departure.coordinates.name} to #{move.destination.coordinates.name}" #delete later
+			end
+		end
+		# for debugging: going to try only changing boardstate.movelist instead of
+		# => also returning it
+		#return boardstate.movelist #note: we do not determine at this stage whether these moves will put the friendly king in check, because that would be absolute hell in terms of both memory efficieny and our ability to read the code.
+		self.movelist
 	end
 end
 
@@ -423,6 +449,9 @@ end
 
 class Piece
 	attr_accessor :coordinates, :serial, :depth, :game, :moved, :color
+	class << self; attr_accessor :black_symbol, :white_symbol end
+	@white_symbol = "?"
+	@black_symbol = "?"
 	def initialize(color, tilename, serial, game, depth = 0)
 		@depth = depth
 		@color = color
@@ -448,43 +477,21 @@ class Piece
 	end
 	def symbol_color
 		symb_color = self.color
-		if $neg_display && (symb_color == "black")
+		if $neg_display && symb_color == "black"
 			symb_color == "white"
-		elsif $neg_display && (symb_color == "white")
-			symb_color == "white"
+		elsif $neg_display && symb_color == "white"
+			symb_color == "black"
 		end
 		symb_color
 	end
 	def symbol(color = self.symbol_color)
 		if color == "white"
-			return self.white_symbol(self.class)
+			raise if self.class.white_symbol.nil?
+			return self.class.white_symbol
 		else
-			return self.black_symbol(self.class)
+			raise if self.class.black_symbol.nil?
+			return self.class.black_symbol
 		end
-	end
-	def white_symbol(klass)
-		white_symbols = {
-			King => "♚",
-			Queen => "♛",
-			Rook => "♜",
-			Bishop => "♝",
-			Knight => "♞",
-			Pawn => "♟",
-			Piece => "?"
-		}
-		white_symbols[klass]
-	end
-	def black_symbol(klass)
-		black_symbols = {
-			King => "♔",
-			Queen => "♕",
-			Rook => "♖",
-			Bishop => "♗",
-			Knight => "♘",
-			Pawn => "♙",
-			Piece => "?"
-		}
-		black_symbols[klass]
 	end
 	def simlevel
 		return self.game.simlevels[self.depth.abs]
@@ -559,6 +566,8 @@ But no, now you are obligated to suck at least one nut as a direct result of you
 
 class Rook < Piece
 	attr_accessor :castle_path, :castle_dest, :castle_tiles
+	@white_symbol = "♜"
+	@black_symbol = "♖"
 	def initialize(team, tilename, serial, game, depth = 0)
 		super(team, tilename, serial, game, depth)
 	end
@@ -595,7 +604,7 @@ class Rook < Piece
 		move.piece.moved = true
 		move.simlevel.moving_team = move.team.opposite
 		move.snapshot = Snapshot.new(move.simlevel)
-		generate_valid_moves(move.simlevel)
+		move.simlevel.generate_valid_moves
 		if (move.enemy_check == true) && (move.simevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
 			game_over(move, checkmate)
 		elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
@@ -609,6 +618,8 @@ class Rook < Piece
 end
 
 class Knight < Piece
+	@white_symbol = "♞"
+	@black_symbol = "♘"
 	def initialize(team, tilename, serial, game, depth = 0)
 		super(team, tilename, serial, game, depth)
 	end
@@ -627,6 +638,8 @@ class Knight < Piece
 end
 
 class Bishop < Piece
+	@white_symbol = "♝"
+	@black_symbol = "♗"
 	def initialize(team, tilename, serial, game, depth = 0)
 		super(team, tilename, serial, game, depth)
 	end
@@ -636,6 +649,8 @@ class Bishop < Piece
 end
 
 class King < Piece
+	@white_symbol = "♚"
+	@black_symbol = "♔"
 	def initialize(color, tilename, serial, game, depth = 0)
 		super(color, tilename, serial, game, depth)
 		if team.kings.count < (self.depth.abs + 1)
@@ -661,6 +676,8 @@ class King < Piece
 end
 
 class Queen < Piece
+	@white_symbol = "♛"
+	@black_symbol = "♕"
 	def initialize(team, tilename, serial, game, depth = 0)
 		super(team, tilename, serial, game, depth)
 	end
@@ -670,6 +687,8 @@ class Queen < Piece
 end
 
 class Pawn < Piece
+	@white_symbol = "♟"
+	@black_symbol = "♙"
 	attr_accessor :orientation
 	def initialize(color, tilename, serial, game, depth = 0)
 		super(color, tilename, serial, game, depth)
@@ -784,22 +803,22 @@ class Pawn < Piece
 	end
 	def promotion_conditions(move)
 		if [1, 8].include?(move.destination.coordinates.y_axis) &&
-			move.moving_team.player.name == "AI"
-			self.promote("random")
+			move.team.player.name == "AI"
+			self.promote("random", move)
 		elsif [1, 8].include?(move.destination.coordinates.y_axis)
-			self.promotion_prompt
+			self.promotion_prompt(move)
 		end
 	end
-	def promotion_prompt
+	def promotion_prompt(move)
 		loop do
 			puts "What would you like to promote your pawn to?"
 			response = gets.chomp.capitalize
-			break unless self.promote(response)
+			break unless self.promote(response, move)
 			self.promotion_error_message(response)
 		end
 	end
 	PROMO_KLASSES = [Queen, Knight, Bishop, Rook]
-	def promote(response)
+	def promote(response, move)
 		promo_klass = PROMO_KLASSES.find {|klass| klass.to_s == response.capitalize}
 		promo_klass = PROMO_KLASSES.sample if response == "Random"
 		return nil unless promo_klass
@@ -807,7 +826,7 @@ class Pawn < Piece
 			piece.is_a?(promo_klass) && piece.team == self.team
 		}
 		serial = klassmates.count + 1
-		replacement = promo_klass.new(self.team, self.tile.name, serial, self.depth)
+		replacement = promo_klass.new(self.team, self.move.departure.name, serial, self.game, self.depth)
 		self.coordinates = nil
 		replacement.moved = true
 		replacement
@@ -877,6 +896,9 @@ class Tile
 		end
 	end
 	def meat
+		if self.color_square.nil? || self.center_symbol.nil?
+			puts "piece = #{self.occupied_piece.name} color_square = #{self.color_square.to_s} center_symbol = #{self.center_symbol.to_s}"
+		end
 		#this string will serve as both the upper and lower third of this tile when
 		#displayed on the board when we call the board_display function
 		(self.color_square + self.center_symbol + self.color_square)
@@ -941,7 +963,6 @@ class Move
 		unless @destination == "castle"
 			@taken = destination.occupied_piece # reminder: do we need to set taken to nil?
 		end
-		@moving_team = @piece.team #the team that is making the move
 		@enemy = @piece.team.opposite
 		@turn = game.boardstate.turn_counter
 		@first_move = @piece.moved
@@ -950,14 +971,14 @@ class Move
 		# @check_cache will be used to cache the results of check_detect as needed
 	end
 	def white_check
-		if self.moving_team == self.game.white_team
+		if self.team == self.game.white_team
 			return self.ally_check
 		else
 			return self.enemy_check
 		end
 	end
 	def black_check
-		if self.moving_team == self.game.black_team
+		if self.team == self.game.black_team
 			return self.ally_check
 		else
 			return self.enemy_check
@@ -982,7 +1003,7 @@ class Move
 	end
 	def ally_check_detect
 		outcome = self.simulate_outcome
-		generate_valid_moves(outcome)
+		outcome.generate_valid_moves
 		possible_moves = outcome.movelist
 		if possible_moves.any? {|move| move.taken.is_a?(King)}
 			self.ally_check_cache = true
@@ -993,7 +1014,7 @@ class Move
 	end
 	def enemy_check_detect(outcome = self.simulate_outcome)
 		outcome.moving_team = outcome.moving_team.opposite #we proceed as though the moving team gets another free turn
-		possible_moves = generate_valid_moves(outcome)
+		possible_moves = outcome.generate_valid_moves
 		if possible_moves.any? {|move| move.taken.is_a?(King)}
 			return self.enemy_check_cache = true
 		else
@@ -1037,62 +1058,58 @@ class Move
 		moved_piece.move_to(self.destination.coordinates)
 		simstate.moving_team = simstate.moving_team.opposite
 	end
-end
-
-def execute_move(move)
-	move.previous_turn = move.game.history.last
-	move.previous_turn.following_turn = move if move.previous_turn
-	puts "#{move.team.color.upcase} moves their #{move.piece.class.to_s} from #{move.departure.coordinates.name} to #{move.destination.coordinates.name}."
-	puts "#{move.team.color.capitalize}'s #{move.piece.class.to_s} has taken #{move.enemy.color}'s' #{move.taken.class.to_s}" if move.taken
-	move.piece.move_to(move.destination)
-	if (move.piece.is_a?(Pawn) && [1, 8].include?(move.destination.coordinates.y_axis))
-		move.piece.promotion_conditions(move)
+	def execute
+		self.previous_turn = self.game.history.last
+		self.previous_turn.following_turn = self if self.previous_turn
+		puts "#{self.team.color.upcase} moves their #{self.piece.class.to_s} from #{self.departure.coordinates.name} to #{self.destination.coordinates.name}."
+		puts "#{self.team.color.capitalize}'s #{self.piece.class.to_s} has taken #{self.enemy.color}'s' #{self.taken.class.to_s}" if self.taken
+		self.piece.move_to(self.destination)
+		if (self.piece.is_a?(Pawn) && [1, 8].include?(self.destination.coordinates.y_axis))
+			self.piece.promotion_conditions(self)
+		end
+		self.game.history.push(self) #reminder: should this happen before or after game over?
+		self.simlevel.turn_counter += 1
+		self.piece.moved = true
+		self.simlevel.moving_team = self.simlevel.moving_team.opposite
+		self.snapshot = Snapshot.new(self.simlevel)
+		self.mate_detect
+		self.game.boardstate.display
+		self.three_move_rule
+		self.fifty_move_rule
+		if self.enemy_check
+			puts "#{self.enemy.player.name.upcase}'s king is in check!"
+		end
 	end
-	move.game.history.push(move) #reminder: should this happen before or after game over?
-	move.simlevel.turn_counter += 1
-	move.piece.moved = true
-	move.simlevel.moving_team = move.simlevel.moving_team.opposite
-	move.snapshot = Snapshot.new(move.simlevel)
-	mate_detect(move)
-	move.game.boardstate.display
-	three_move_rule(move)
-	fifty_move_rule(move)
-	if (move.enemy_check == true)
-		puts "#{move.enemy.player.name.upcase}'s king is in check!"
+	def mate_detect
+		self.simlevel.generate_valid_moves
+		valid_move = self.simlevel.movelist.find {|found_move| !found_move.ally_check}
+		if self.enemy_check && !valid_move # aka checkmate
+			game_over(self, "checkmate") #reminder: the game_over method will pobably be made part of the game class
+		elsif !valid_move # aka stalemate
+			game_over(self, "stalemate")
+		end
 	end
-end
-
-def mate_detect(move)
-	generate_valid_moves(move.simlevel)
-	valid_move = move.simlevel.movelist.find {|found_move| !found_move.ally_check}
-	if move.enemy_check && !valid_move # aka checkmate
-		game_over(move, "checkmate")
-	elsif !valid_move # aka stalemate
-		game_over(move, "stalemate")
+	def three_move_rule
+		identical_moves = self.game.history.select {|past_move| (past_move.snapshot == self.snapshot)}
+		if identical_moves.count == 2
+			puts "The board has already been in this state before. If this happens\nagain, the game will result in a draw."
+		elsif identical_moves.count == 3
+			puts "The board has been in this state three times. The game ends in a draw."
+			game_over("three moves") # reminder: the game_over method will pobably be made part of the game class
+		end
 	end
-end
-
-def three_move_rule(move)
-	identical_moves = move.game.history.select {|past_move| (past_move.snapshot == move.snapshot)}
-	if identical_moves.count == 2
-		puts "The board has already been in this state before. If this happens\nagain, the game will result in a draw."
-	elsif identical_moves.count == 3
-		puts "The board has been in this state three times. The game ends in a draw."
-		game_over("three moves")
-	end
-end
-
-def fifty_move_rule(move)
-	# reminder: this should allow either player to declare a draw rather than force one on both of them
-	fmc = move.simlevel.fifty_move_counter
-	fmc += 1 unless move.taken || move.piece.is_a?(Pawn)
-	if fmc == 50
-		game_over(move, "fifty moves")
-	elsif fmc > 19 && (fmc % 10 == 0) || (50 - fmc < 10)
-		puts "It has been #{fmc.to_s} moves since a pawn has been"
-		puts "moved or a piece has been taken."
-		puts "If no piece is captured or pawn moved in the next"
-		puts "#{(50 - fmc).to_s} turns, the game will end in a draw."
+	def fifty_move_rule
+		# reminder: this should allow either player to declare a draw rather than force one on both of them
+		fmc = self.simlevel.fifty_move_counter
+		fmc += 1 unless self.taken || self.piece.is_a?(Pawn)
+		if fmc == 50
+			game_over(self, "fifty moves")
+		elsif fmc > 19 && (fmc % 10 == 0) || (50 - fmc < 10)
+			puts "It has been #{fmc.to_s} moves since a pawn has been"
+			puts "moved or a piece has been taken."
+			puts "If no piece is captured or pawn moved in the next"
+			puts "#{(50 - fmc).to_s} turns, the game will end in a draw."
+		end
 	end
 end
 
@@ -1132,241 +1149,7 @@ def test_protocol(movelist) #debugging tool
 	end
 end
 
-def generate_valid_moves(boardstate) #returns a list of every possible valid move for a given turn from an array of tiles
-	boardstate.movelist = [] #this is a list of all valid moves for the given state of the board, will be returned at the end
-	mover_pieces = boardstate.active_pieces.select {|piece|
-		piece.team == boardstate.moving_team
-	}
-	mover_pieces.each do |piece|
-		nonself_moves_before = boardstate.movelist.select {|move| move.piece != piece}
-		# we need to have a record so that we know if a piece's criteria is
-		# messing with moves that don't belong to that piece
-		destinations = piece.criteria
-		destinations.each do |destination|
-			if destination.occupied_piece && destination.occupied_piece.team == piece.team
-				next
-			else
-				move = Move.new(boardstate.game, piece.tile, destination)
-				boardstate.movelist.push(move)
-			end
-		end
-		nonself_moves_after = boardstate.movelist.select {|move| move.piece != piece}
-		unless nonself_moves_before == nonself_moves_after
-			puts "piece.tile = #{piece.tile.name}, #{piece.depth.to_s} piece.name = #{piece.name} #{piece.simlevel.object_id}"
-			puts "added:"
-			(nonself_moves_after - nonself_moves_before).each do |move|
-				puts "#{move.piece.name} #{move.piece.depth.to_s} #{move.departure.name} #{move.destination.name}  #{move.simlevel.object_id}"
-			end
-			puts "removed:"
-			(nonself_moves_before- nonself_moves_after).each do |move|
-				puts "#{move.piece.name} #{move.departure.name} #{move.destination.name}, #{move.simlevel.object_id}"
-			end
-			raise "#{piece.name} is adding or deleting other pieces' moves"
-			# each piece's criteria should be deleting any invalid moves that move
-			# that piece, and, in the case of a rook, adding an option to castle if
-			# applicable. If moves that move other pieces get added or removed,
-			# something isn't working correctly.
-		end
-	end
-	boardstate.movelist.each do |move|
-		if move.destination == "castle"
-			#this is only here to avoid calling "castle".destination and getting an error
-		#	puts "#{move.piece.name} castle" #delete later
-		elsif ((move.destination.occupied_piece != nil) && (move.destination.occupied_piece.team == move.piece.team)) ||
-				boardstate.tiles.include?(move.destination) == false ||
-				move.destination == move.departure
-			boardstate.movelist.delete(move)
-		else
-		#	puts "#{move.piece.name} #{move.departure.coordinates.name} to #{move.destination.coordinates.name}" #delete later
-		end
-	end
-	# for debugging: going to try only changing boardstate.movelist instead of
-	# => also returning it
-	#return boardstate.movelist #note: we do not determine at this stage whether these moves will put the friendly king in check, because that would be absolute hell in terms of both memory efficieny and our ability to read the code.
-	boardstate.movelist
-end
 
-def start_new_game #unfinished, need to add protocols for ending the game (updating scoreboard etc)
-	# reminder: fix everything related to AI vs AI games
-	# future improvement: add the ability to save and load players
-	player_names = player_name_prompt
-	white_player_name = player_names["white"]
-	black_player_name = player_names["black"]
-	create_players(white_player_name, black_player_name)
-	# reminder: make sure this can distinguish new players from old ones
-end
-
-def create_players(white_player_name, black_player_name)
-	black_player = $players.find {|player| player.name == black_player_name}
-	if black_player == nil
-		black_player = Player.new("black", black_player_name)
-	end
-	white_player = $players.find {|player| player.name == white_player_name}
-	if white_player == nil
-		white_player = Player.new("white", white_player_name)
-	end
-	Game.new(white_player, black_player).play
-end
-
-def player_name_prompt
-	loop do
-		puts %Q(What is the white player's name?\n(To assign an AI to white team, enter the name "AI"))
-		white_player_name = gets.chomp.upcase
-		puts %Q(What is the black player's name?\n(To assign an AI to black team, enter the name "AI"))
-		black_player_name = gets.chomp.upcase
-		if (black_player_name != white_player_name) || black_player_name == "AI"
-			return {"white" => white_player_name, "black" => black_player_name}
-		end
-		puts "Sorry, both teams cannot have the same player."
-	end
-end
-
-def ai_move(boardstate)
-	movelist = boardstate.movelist.select {|move| move.ally_check == false}
-	move = movelist.sample
-	execute_move(move)
-end
-
-def human_move(boardstate, response, movelist)
-	departure = boardstate.tiles.find {|tile| tile.coordinates.name == response}
-	if departure
-		movelist.select! {|found_move| found_move.departure.coordinates.name == response} #the list of possible moves will now only contain moves from the specified tile
-		destination_prompt(boardstate, departure, movelist)
-	else
-		boardstate.display
-		puts "Sorry, that's not a valid coordinate."
-	end
-end
-
-def empty_movelist_message(boardstate, departure)
-	boardstate.display
-	if departure.occupied_piece == nil
-		puts "Sorry, that tile is unoccupied."
-	elsif departure.occupied_piece.team != boardstate.moving_team
-		puts "Sorry, the piece belongs to the other player."
-	else
-		puts "Sorry, that piece has no valid moves."
-	end
-end
-
-def normal_move(boardstate, departure, movelist, response)
-	destination = boardstate.tiles.find {|tile| tile.coordinates.name == response}
-	move = movelist.find {|found_move| found_move.destination.coordinates.name == response}
-	if !move && (!destination.occupied_piece || (destination.occupied_piece.team != boardstate.moving_team))
-		boardstate.display
-		puts "Sorry, that's not a valid move for that piece."
-	elsif !move && (destination.occupied_piece && destination.occupied_piece.team == boardstate.moving_team)
-		puts "Sorry, that tile is already occupied by a friendly piece."
-		boardstate.display
-	elsif move.ally_check == true
-		boardstate.display
-		puts "Sorry, that move would put your king in check."
-	else
-		execute_move(move)
-	end
-end
-
-def destination_prompt(boardstate, departure, movelist)
-	if movelist.empty? == true #displays error messages if the specified coordinate has no valid moves
-		empty_movelist_message(boardstate, departure)
-	else
-		puts "Where would you like to move it to?"
-		can_castle = false
-		if movelist.find {|found_move| ((found_move.departure == departure) && (found_move.destination == "castle"))}
-			puts %Q(You can also say "castle" to castle.)
-			can_castle = true
-		end
-		response = gets.chomp.upcase
-		if (!response.casecmp("castle") && can_castle)
-			departure.occupied_piece.castle
-		elsif tiles.any? {|tile| tile.coordinates.name == response} == false
-			boardstate.display
-			puts "Sorry, that's not a valid coordinate."
-		else
-			normal_move(boardstate, departure, movelist, response)
-		end
-	end
-end
-
-def human_turn_prompt(boardstate)
-	loop do
-		boardstate.display
-		movelist = boardstate.movelist.dup
-		puts "It is #{boardstate.moving_team.player.name}'s turn."
-		puts "What is the coordinate of the piece I should move?"
-		puts %Q(Please reply in the form of a coordinate, e.g. "B2".)
-		puts %Q(You can also enter "surrender" to surrender, "draw" to agree to a draw,\n"move history" to view move history, or "exit" to exit\nthe game with or without saving.)
-		#test_protocol(movelist) #delete later
-		response = gets.chomp.upcase
-		if (response.length == 2)
-			human_move(boardstate, response, movelist)
-			break
-		elsif response == "move history"
-			move_history_prompt #unfinished: add this
-			boardstate.display
-		elsif response == "surrender" #unfinished: need to add a "game over" method
-			game_over(nil, "surrender") #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
-		elsif response == "draw"
-			draw_prompt
-			break # reminder: this just causes human)_turn_prompt to be called again
-		elsif response == "exit"
-			boardstate.game.exit_game #reminder: make this
-		else
-			puts "Sorry, I didn't understand that."
-		end
-	end
-end
-
-def draw_prompt
-	loop do
-		puts "Do both players agree to a draw?" #future improvement: maybe have some mechanism to ask both players?
-		response = gets.chomp.downcase
-		if response == "yes"
-			game_over(nil, "draw")
-			break
-		elsif response == "no"
-			break
-		else
-			puts "Sorry, I didn't understand that."
-		end
-	end
-end
-
-def turn_prompt(boardstate)
-	moving_player_name = boardstate.moving_team.player.name
-	if moving_player_name.upcase == "AI"
-		ai_move(boardstate)
-		puts "AI move: #{moving_player_name}" # delete later
-	else
-		human_turn_prompt(boardstate)
-	end
-end
-
-def display_scoreboard #future improvement: add name feature, add the ability to save and load scoreboards, probably change this entirely to deal with a large number of player names
-	valid_response = false
-	until valid_response == true #keeps asking until it gets a valid input
-		puts "\nWhich scoreboard would you like to view?"
-		puts %Q(You can say "human vs human", "human vs AI", "both", or "back".\n)
-		response = gets.chomp.downcase
-		if response == "human vs human"
-			puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
-			puts "Player 2 has #{$pvp_scoreboard[1]} point(s)."
-			valid_response = true
-		elsif response == "human vs AI"
-			puts "\nHuman has #{$AI_scoreboard[0]} point(s)."
-			puts "Chessbot has #{$AI_scoreboard[1]} point(s)."
-			valid_response = true
-		elsif response == "both"
-			puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
-			puts "Player 2 has #{$pvp_scoreboard[1]} point(s).\n"
-			puts "Human has #{$AI_scoreboard[0]} point(s)."
-			puts "Chessbot has #{$AI_scoreboard[1]} point(s)."
-			valid_response = true
-		else
-			puts "\nSorry, I didn't understand that."
-		end
-	end
-end
 
 =begin
 To explain how the display works: each tile is a 3x3 arrangement of unicode
@@ -1397,36 +1180,235 @@ We do this for each row, then also add axes and legends where appropriate.
 
 =end
 
-def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
-	loop do #future improvement: options to save and load games/scoreboards
-		puts %Q(\nWhat would you like to do? You can say "new game",\n"view scoreboard" "change display colors", or "close"\n ) #reminder: add the ability to load games
-		response = gets.chomp.downcase
-		break if main_menu_execute(response) == "close_chess"
-	end
-end
-
-def main_menu_execute(response)
-	if response == "new game"
-		start_new_game
-	elsif response == "view scoreboard"
-		display_scoreboard
-	elsif response == "change display colors"
-		negquery
-	elsif response == "close"
-		close_chess #reminder: how should this work?
-		return "close_chess"
-	else
-		puts "Sorry, I didn't understand that."
-	end
-end
-
-$first_negquery = true
-
-# and now on to the actual running of the program
-
 if $needs_testing == true # this step is ony for debugging
 	$test_protocol
 end
 
-negquery
-main_menu_prompt
+class TurnMenu
+	attr_accessor :game, :boardstate
+	def initialize(game)
+		@game = game
+		@boardstate = game.boardstate
+		self.ai_or_human
+	end
+	def ai_or_human
+		moving_player_name = self.boardstate.moving_team.player.name
+		if moving_player_name.upcase == "AI"
+			self.ai_move
+		else
+			self.human_prompt
+		end
+	end
+	def ai_move
+		movelist = self.boardstate.movelist.select {|move| move.ally_check == false}
+		movelist.sample.execute
+	end
+	def human_prompt
+		loop do
+			self.boardstate.display
+			movelist = self.boardstate.movelist.dup
+			puts "It is #{self.boardstate.moving_team.player.name}'s turn."
+			puts "What is the coordinate of the piece I should move?"
+			puts %Q(Please reply in the form of a coordinate, e.g. "B2".)
+			puts %Q(You can also enter "surrender" to surrender, "draw" to agree to a draw,\n"move history" to view move history, or "exit" to exit\nthe game with or without saving.)
+			#test_protocol(movelist) #delete later
+			response = gets.chomp.upcase
+			if (response.length == 2)
+				self.human_move(response, movelist)
+				break
+			elsif response == "move history"
+				self.move_history_prompt #unfinished: add this
+				self.boardstate.display
+			elsif response == "surrender" #unfinished: need to add a "game over" method
+				self.game_over(nil, "surrender") #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
+			elsif response == "draw"
+				self.draw_prompt
+				break # reminder: this just causes human)_turn_prompt to be called again
+			elsif response == "exit"
+				self.boardstate.game.exit_game #reminder: make this
+			else
+				puts "Sorry, I didn't understand that."
+			end
+		end
+	end
+	def human_move(response, movelist)
+		departure = self.boardstate.tiles.find {|tile|
+			tile.coordinates.name == response
+		}
+		if departure
+			movelist.select! {|found_move| found_move.departure.coordinates.name == response} #the list of possible moves will now only contain moves from the specified tile
+			self.destination_prompt(departure, movelist)
+		else
+			self.boardstate.display
+			puts "Sorry, that's not a valid coordinate."
+		end
+	end
+	def destination_prompt(departure, movelist)
+		if movelist.empty?#displays error messages if the specified coordinate has no valid moves
+			self.empty_movelist_message(departure)
+		else
+			puts "Where would you like to move it to?"
+			can_castle = false
+			if movelist.find {|found_move| ((found_move.departure == departure) && (found_move.destination == "castle"))}
+				puts %Q(You can also say "castle" to castle.)
+				can_castle = true
+			end
+			response = gets.chomp.upcase
+			if (!response.casecmp("castle") && can_castle)
+				departure.occupied_piece.castle
+			elsif !self.boardstate.tiles.any? {|tile| tile.coordinates.name == response}
+				self.boardstate.display
+				puts "Sorry, that's not a valid coordinate."
+			else
+				self.normal_move(departure, movelist, response)
+			end
+		end
+	end
+	def normal_move(departure, movelist, response)
+		destination = self.boardstate.tiles.find {|tile| tile.coordinates.name == response}
+		move = movelist.find {|found_move| found_move.destination.coordinates.name == response}
+		if move.nil? && (!destination.occupied_piece || (destination.occupied_piece.team != boardstate.moving_team))
+			self.boardstate.display
+			puts "Sorry, that's not a valid move for that piece."
+		elsif move.nil? && (destination.occupied_piece && destination.occupied_piece.team == boardstate.moving_team)
+			puts "Sorry, that tile is already occupied by a friendly piece."
+			self.boardstate.display
+		elsif move.ally_check == true
+			self.boardstate.display
+			puts "Sorry, that move would put your king in check."
+		else
+			move.execute
+		end
+	end
+	def empty_movelist_message(departure)
+		self.boardstate.display
+		if departure.occupied_piece.nil?
+			puts "Sorry, that tile is unoccupied."
+		elsif departure.occupied_piece.team != self.boardstate.moving_team
+			puts "Sorry, the piece belongs to the other player."
+		else
+			puts "Sorry, that piece has no valid moves."
+		end
+	end
+	def draw_prompt
+		loop do
+			puts "Do both players agree to a draw?" #future improvement: maybe have some mechanism to ask both players?
+			response = gets.chomp.downcase
+			if response == "yes"
+				self.game_over(nil, "draw")
+				break
+			elsif response == "no"
+				break
+			else
+				puts "Sorry, I didn't understand that."
+			end
+		end
+	end
+end
+
+class MainMenu
+	attr_accessor :game, :first_negquery
+	def initialize
+		@first_negquery = true
+		self.negquery
+		self.main_menu_prompt
+	end
+	def negquery
+		Boardstate.new(nil, board_create, nil).display
+		negdone = false
+		if self.first_negquery == true
+			puts "Hi, welcome to chess! Before we begin I need your help to set the display.\n"
+		end
+		loop do #keeps going until the user is satisfied with the appearance of the display
+			puts "In the above board, does tile A1 appear black to you?\n"
+			response = gets.chomp
+			if response.downcase == "yes"
+				if self.first_negquery == true
+					puts "\nGood. Let's get started then."
+					self.first_negquery = false
+				end
+				break
+			elsif response.downcase == "no"
+				$neg_display = !$neg_display
+				board = board_create(nil)
+				Boardstate.new(nil, board_create, nil).display
+				"How about now?"
+			else
+				puts "Sorry, I didn't understand that."
+			end
+		end
+	end
+	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
+		loop do #future improvement: options to save and load games/scoreboards
+			puts %Q(\nWhat would you like to do? You can say "new game",\n"view scoreboard" "change display colors", or "close"\n ) #reminder: add the ability to load games
+			response = gets.chomp.downcase
+			break if self.main_menu_execute(response) == "close_chess"
+		end
+	end
+	def main_menu_execute(response)
+		if response == "new game"
+			self.start_new_game
+		elsif response == "view scoreboard"
+			self.display_scoreboard
+		elsif response == "change display colors"
+			self.negquery
+		elsif response == "close"
+			self.close_chess #reminder: how should this work?
+			return "close_chess"
+		else
+			puts "Sorry, I didn't understand that."
+		end
+	end
+	def display_scoreboard #future improvement: add name feature, add the ability to save and load scoreboards, probably change this entirely to deal with a large number of player names
+		loop do #keeps asking until it gets a valid input
+			puts "\nWhich scoreboard would you like to view?"
+			puts %Q(You can say "human vs human", "human vs AI", "both", or "back".\n)
+			response = gets.chomp.downcase
+			if response == "human vs human"
+				puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
+				puts "Player 2 has #{$pvp_scoreboard[1]} point(s)."
+				break
+			elsif response == "human vs AI"
+				puts "\nHuman has #{$AI_scoreboard[0]} point(s)."
+				puts "Chessbot has #{$AI_scoreboard[1]} point(s)."
+				break
+			elsif response == "both"
+				puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
+				puts "Player 2 has #{$pvp_scoreboard[1]} point(s).\n"
+				puts "Human has #{$AI_scoreboard[0]} point(s)."
+				puts "Chessbot has #{$AI_scoreboard[1]} point(s)."
+				break
+			else
+				puts "\nSorry, I didn't understand that."
+			end
+		end
+	end
+	def player_name_prompt
+		loop do
+			puts %Q(What is the white player's name?\n(To assign an AI to white team, enter the name "AI"))
+			white_player_name = gets.chomp.upcase
+			puts %Q(What is the black player's name?\n(To assign an AI to black team, enter the name "AI"))
+			black_player_name = gets.chomp.upcase
+			if (black_player_name != white_player_name) || black_player_name == "AI"
+				return {"white" => white_player_name, "black" => black_player_name}
+			end
+			puts "Sorry, both teams cannot have the same player."
+		end
+	end
+	def start_new_game #unfinished, need to add protocols for ending the game (updating scoreboard etc)
+		# reminder: fix everything related to AI vs AI games
+		# future improvement: add the ability to save and load players
+		# reminder: make sure this can distinguish new players from old ones
+		player_names = self.player_name_prompt
+		white_player_name = player_names["white"]
+		black_player_name = player_names["black"]
+		black_player = $players.find {|player| player.name == black_player_name}
+		black_player = Player.new("black", black_player_name) if black_player.nil?
+		white_player = $players.find {|player| player.name == white_player_name}
+		white_player = Player.new("white", white_player_name) if white_player.nil?
+		self.game = Game.new(white_player, black_player)
+		self.game.play
+	end
+end
+
+MainMenu.new
