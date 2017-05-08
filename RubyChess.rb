@@ -1,12 +1,11 @@
 # the word "bug" in comments will be used to flag unfixed bugs
+require 'yaml'
 $needs_testing = false #used for debugging
 
 $neg_display = true # controls whether or not to invert the black and white colors in the display
 
 $pvp_scoreboard = [0, 0]
 $AI_scoreboard = [0, 0]
-
-$players = []
 
 class Coordinates
 	attr_accessor :x_axis, :y_axis, :letter, :name
@@ -33,6 +32,12 @@ class Coordinates
 	def self.num_to_alphanum(x_axis, y_axis) #for converting e.g. "(1, 1)" to "A1"
 		letter = self.x_to_letter(x_axis) #translates the x-coordinate to a letters
 		letter + y_axis.to_s #combines the letter and y-coordinate to create a single name
+	end
+	def ==(other)
+		return false unless other.is_a?(Coordinates)
+		return false unless other.y_axis == self.y_axis
+		return false unless other.x_axis == self.x_axis
+		true
 	end
 end
 
@@ -345,7 +350,7 @@ class Simlevel < Boardstate #used for check_detect and checkmate_detect
 	end
 end
 
-$opening_moves = [ #for debugging
+OPENING_MOVES = [ #for debugging
 	["A2", "A3"], ["A2, A4"], ["B2", "B3"], ["B2", "B4"], ["C2", "C3"],
 	["C2", "C4"], ["D2", "D3"], ["D2", "D4"], ["E2", "E3"], ["E2", "E4"],
 	["F2", "F3"], ["F2", "F4"], ["G2", "G3"], ["G2", " G4"], ["H2", "H3"],
@@ -354,7 +359,7 @@ $opening_moves = [ #for debugging
 
 def valid_opening?(opening) #for debugging
 	formatted_opening = [opening.departure.coordinates.name, opening.destination.coordinates.name]
-	return $opening_moves.include?(formatted_opening)
+	return OPENING_MOVES.include?(formatted_opening)
 end
 
 class Path # used to find the possible moves of a rook, bishop, or queen
@@ -664,11 +669,6 @@ class King < Piece
 	@black_symbol = "♔"
 	def initialize(color, tilename, serial, game, depth = 0)
 		super(color, tilename, serial, game, depth)
-		if team.kings.count < (self.depth.abs + 1)
-			team.kings.push(self)
-		else
-			team.kings[self.depth.abs] = self
-		end
 	end
 	def criteria
 		valid_destinations = []
@@ -704,9 +704,7 @@ class Pawn < Piece
 	def initialize(color, tilename, serial, game, depth = 0)
 		super(color, tilename, serial, game, depth)
 		@orientation = 1 #which way is this pawn moving?
-		if color == "black"
-			@orientation = (-1)
-		end
+		@orientation = (-1) if color == "black"
 	end
 	def one_tile_ahead(destinations)
 		dest = self.simlevel.tiles.find {|tile|
@@ -920,22 +918,24 @@ class Tile
 end
 
 class Team
-	attr_accessor :color, :player, :king, :check, :kings, :game
+	attr_accessor :color, :player, :kings, :check, :game
 	def initialize(color, player, game)
 		@color = color
 		@player = player
 		@game = game
-		@kings = [] #gives us an easy way of finding the king for any given simlevel
 		@check = false #is this team's king currently in check?
+	end
+	def kings # gives us an easy way of finding the king for any given simlevel
+		self.game.pieces.find {|piece| piece.is_a?(King)}
 	end
 	def king
 		return self.kings[0]
 	end
 	def sim_king
-		return self.kings[0]
+		return self.kings[-1]
 	end
 	def metasim_king
-		return self.kings[0]
+		return self.kings[-2]
 	end
 	def opposite
 		if self.color == "white"
@@ -948,14 +948,58 @@ class Team
 	end
 end
 
-$players = []
-
 class Player #will probably be used in save states later
 	attr_accessor :color, :name
+	@@roster = []
 	def initialize(color, name)
 		@color = color #this may change from game to game
 		@name = name
-		$players.push(self)
+		@@roster.push(self)
+		Player.sync_players
+	end
+	def roster
+		Player.sync_players
+		@@roster
+	end
+	def self.create_or_load(color, name)
+		Player.sync_players
+		existing_player = @@roster.find {|player| player.name == name}
+		if existing_player
+			return existing_player
+		else
+			return Player.new(color, name)
+		end
+	end
+	def self.find_saved(name, saved_players)
+		saved_players.find {|saved| saved.name == name}
+	end
+	def self.sync_players
+		saved_players = self.load_players
+		@@roster.each do |existing_player|
+			saved_player = self.find_saved(existing_player.name, saved_players)
+			if saved_player.nil?
+				saved_players.push(existing_player)
+			else
+				saved_players[saved_players.index(saved_player)] = existing_player
+			end
+		end
+		@@roster = saved_players
+		self.save_players
+	end
+	def self.save_players
+		players_file =  File.open("players.yaml", "w")
+		players_file.puts YAML.dump(@@roster)
+		players_file.close
+	end
+	def self.load_players
+		if File::exists?("players.yaml")
+			players_file = File.open("players.yaml", "r")
+			players_text = players_file.read
+			players_file.close
+			return YAML.load(players_text)
+		else
+			return []
+		end
 	end
 end
 
@@ -1396,12 +1440,10 @@ class MainMenu
 		# future improvement: add the ability to save and load players
 		# reminder: make sure this can distinguish new players from old ones
 		player_names = self.player_name_prompt
-		white_player_name = player_names["white"]
-		black_player_name = player_names["black"]
-		black_player = $players.find {|player| player.name == black_player_name}
-		black_player = Player.new("black", black_player_name) if black_player.nil?
-		white_player = $players.find {|player| player.name == white_player_name}
-		white_player = Player.new("white", white_player_name) if white_player.nil?
+		white_name = player_names["white"]
+		black_name = player_names["black"]
+		black_player = Player.create_or_load("black", black_name)
+		white_player = Player.create_or_load("white", white_name)
 		self.game = Game.new(white_player, black_player)
 		self.game.play
 	end
