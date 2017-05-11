@@ -1,11 +1,72 @@
 # the word "bug" in comments will be used to flag unfixed bugs
+
 require 'yaml'
+Dir.chdir("/home/alex/Desktop/Ruby/Chess")
+
 $needs_testing = false #used for debugging
 
 $neg_display = true # controls whether or not to invert the black and white colors in the display
 
 $pvp_scoreboard = [0, 0]
 $AI_scoreboard = [0, 0]
+
+module YesNo
+	def yesno_prompt(message)
+		loop do
+			puts message
+			response = gets.chomp.downcase
+			if response == "yes"
+				return true
+			elsif response == "no"
+				return false
+			else
+				puts "Sorry, I didn't understand that."
+				redo
+			end
+		end
+	end
+end
+
+
+class Scoreboard
+	def initialize(games, players)
+		saved_games = File.open
+		#unfinished
+	end
+	def self.display_prompt
+		loop do
+			puts '\nIf you would like to view the entire scoreboard, say "all"'
+			puts 'If you would like to compare only two players, say "compare"'
+			puts 'You can also say "back" to go back'
+			response = gets.chomp.downcase
+			return response if ["all", "compare", "back"].include?(response)
+			puts "Sorry, I didn't understand that"
+		end
+	end
+	def self.display_menu
+		response = self.display_prompt
+		if response == "all"
+			Scoreboard.display_all
+		elsif response == "compare"
+			Scoreboard.compare_prompt
+		end
+	end
+	def self.display_all
+		puts "This is a placeholder for Scoreboard.display_all!"
+		#unfinished
+	end
+	def self.compare_prompt
+		puts "What is the name of the first player?"
+		player1 = Player.search_roster(gets.chomp.upcase)
+		puts "What is the name of the second player?"
+		player2 = Player.search_roster(gets.chomp.upcase)
+		self.display_comparison(player1, player2)
+	end
+	def display_comparison(player1, player2)
+		puts "This is a placeholder for Scoreboard.display_comparison!"
+		#unfinished
+	end
+end
 
 class Coordinates
 	attr_accessor :x_axis, :y_axis, :letter, :name
@@ -44,9 +105,12 @@ end
 $coordinates = []
 
 class Game
-	attr_accessor :simlevels, :white_player, :black_player, :white_team,
-	:black_team, :name, :history, :pieces, :board, :tiles, :boardstate
+	include YesNo
+	attr_accessor :simlevels, :white_team, :black_team, :history, :pieces,
+	:board, :tiles, :boardstate, :ended,  :white_player, :black_player
+	attr_reader :name, :started
 	def initialize(white_player, black_player)
+		@started = Time.now
 		@white_player = white_player
 		@black_player = black_player
 		@black_team = Team.new("black", @black_player, self)
@@ -60,7 +124,9 @@ class Game
 		@simlevels.push(self.boardstate)
 		@simlevels.push(Simlevel.new(self, [[]], 0))
 		@simlevels.push(Simlevel.new(self, [[]], -1))
-		@name = nil #to be used when saving and loading games
+		players = [@black_player.name, @white_player.name].sort
+		@name = "#{players[0]} vs #{players[1]} #{started}"
+		#to be used when saving and loading games
 		@history = []
 		#gonna try moving the line commented out below to game.play
 		#@boardstate.movelist = generate_valid_moves(@boardstate)
@@ -76,25 +142,62 @@ class Game
 		end
 	end
 	def exit_game
-		save = nil
-		valid_response = false
-		until valid_response == true
-			puts "Would you like to save?"
-			response = gets.chomp.downcase
-			if response == "yes"
-				save = true
-				valid_response = true
-			elsif response == "no"
-				save = false
-				valid_response = true
-			else
-				puts "Sorry, I didn't understand that."
+		return false unless yesno_prompt("Are you sure you want to quit")
+		self.save if yesno_prompt("Would you like to save your game?")
+		$playing = false
+		true
+	end
+	def move_to_save_directory
+		save_dir = Dir.entries("/home/alex/Desktop/Ruby/Chess").find {|f|
+			File.directory?(f) && File.basename(f) == "SavedGames"
+		}
+		Dir.chdir(save_dir ||= Dir.mkdir("SavedGames")
+	end
+	def save
+		self.move_to_save_directory
+		game_save = File.open("#{self.name}.yaml", "w")
+		game_save.puts(YAML.dump(self))
+		game_save.close
+	end
+	def load
+		self.move_to_save_directory
+		game_file = File.open(self.find_save, "r")
+		loaded_game = YAML.load(game_file.read)
+		game_file.close
+		loaded_game
+	end
+	def load_prompt
+		messages = []
+		players = []
+		loop do
+			"What is the name of the first player?"
+			player1 = gets.chomp
+			Player.search_roster(player1)
+	end
+	def find_save(player1, player2)
+		saved_games = self.list_saves(player1, player2)
+		return nil unless saved_games
+		loop do
+			puts "What is the number of the game you want to load?"
+			begin
+				selected = saved_games[gets.chomp.to_i - 1]
+				selected ? (return selected) : (puts "Sorry, that's not on the list")
+			rescue
+				redo
 			end
 		end
-		if save == true
-			#unfinished
+	end
+	def list_saves(player1, player2)
+		pstring = "#{player1} vs #{player2}"
+		saved_games = Dir.entries(Dir.pwd).select {|save|
+			save.length < pstring.length &&
+			File.basename(save)[0...pstring.length] == pstring
+		}
+		saved_games.each do |save|
+			print "#{(saved_games.index(save) + 1).to_s}. "
+			puts "#{File.basename[pstring.length..(-1)]}"
 		end
-		$playing = false
+		saved_games
 	end
 	def create_starting_pieces #returns an array of all pieces in their starting postions
 		pieces = [
@@ -926,7 +1029,8 @@ class Team
 		@check = false #is this team's king currently in check?
 	end
 	def kings # gives us an easy way of finding the king for any given simlevel
-		self.game.pieces.find {|piece| piece.is_a?(King)}
+		king_array = self.game.pieces.select {|piece| piece.is_a?(King)}
+		king_array.sort_by{|king| king.depth.abs}
 	end
 	def king
 		return self.kings[0]
@@ -953,11 +1057,15 @@ class Player #will probably be used in save states later
 	@@roster = []
 	def initialize(color, name)
 		@color = color #this may change from game to game
-		@name = name
+		@name = name.upcase
 		@@roster.push(self)
 		Player.sync_players
 	end
-	def roster
+	def self.search_roster(name)
+		Player.sync_players
+		@@roster.find {|player| player.name == name.upcase}
+	end
+	def self.roster
 		Player.sync_players
 		@@roster
 	end
@@ -1226,6 +1334,7 @@ if $needs_testing == true # this step is ony for debugging
 end
 
 class TurnMenu
+	include YesNo
 	attr_accessor :game, :boardstate
 	def initialize(game)
 		@game = game
@@ -1244,29 +1353,34 @@ class TurnMenu
 		movelist = self.boardstate.movelist.select {|move| move.ally_check == false}
 		movelist.sample.execute
 	end
+	def human_prompt_message
+		self.boardstate.display
+		puts "It is #{self.boardstate.moving_team.player.name}'s turn."
+		puts "What is the coordinate of the piece I should move?"
+		puts %Q(Please reply in the form of a coordinate, e.g. "B2".)
+		puts %Q(You can also: say "surrender" to surrender,)
+		puts %Q("draw" to agree to a draw, "move history" to view move history,)
+		puts %Q(or "exit" to exit the game with or without saving.)
+	end
 	def human_prompt
 		loop do
-			self.boardstate.display
 			movelist = self.boardstate.movelist.dup
-			puts "It is #{self.boardstate.moving_team.player.name}'s turn."
-			puts "What is the coordinate of the piece I should move?"
-			puts %Q(Please reply in the form of a coordinate, e.g. "B2".)
-			puts %Q(You can also enter "surrender" to surrender, "draw" to agree to a draw,\n"move history" to view move history, or "exit" to exit\nthe game with or without saving.)
-			#test_protocol(movelist) #delete later
+			self.human_prompt_message
 			response = gets.chomp.upcase
 			if (response.length == 2)
 				self.human_move(response, movelist)
-				break
-			elsif response == "move history"
+			elsif response == "MOVE HISTORY"
 				self.move_history_prompt #unfinished: add this
 				self.boardstate.display
-			elsif response == "surrender" #unfinished: need to add a "game over" method
+			elsif response == "SURRENDER" #unfinished: need to add a "game over" method
 				self.game_over(nil, "surrender") #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
-			elsif response == "draw"
+				break
+			elsif response == "DRAW"
 				self.draw_prompt
 				break # reminder: this just causes human)_turn_prompt to be called again
-			elsif response == "exit"
-				self.boardstate.game.exit_game #reminder: make this
+			elsif response == "EXIT"
+				return "game exited" if self.boardstate.game.exit_game #reminder: make this
+				break
 			else
 				puts "Sorry, I didn't understand that."
 			end
@@ -1332,22 +1446,14 @@ class TurnMenu
 		end
 	end
 	def draw_prompt
-		loop do
-			puts "Do both players agree to a draw?" #future improvement: maybe have some mechanism to ask both players?
-			response = gets.chomp.downcase
-			if response == "yes"
-				self.game_over(nil, "draw")
-				break
-			elsif response == "no"
-				break
-			else
-				puts "Sorry, I didn't understand that."
-			end
-		end
+		prompt_message = "Do both players agree to a draw?" #future improvement: maybe have some mechanism to ask both players?
+		response = gets.chomp.downcase
+		self.game_over(nil, "draw") if yesno_prompt(prompt_message)
 	end
 end
 
 class MainMenu
+	include YesNo
 	attr_accessor :game, :first_negquery
 	def initialize
 		@first_negquery = true
@@ -1356,26 +1462,21 @@ class MainMenu
 	end
 	def negquery
 		Boardstate.new(nil, nil).display
-		negdone = false
 		if self.first_negquery == true
-			puts "Hi, welcome to chess! Before we begin I need your help to set the display.\n"
+			puts "Hi, welcome to chess!"
+			puts "Before we begin I need your help to set the display.\n"
 		end
-		loop do #keeps going until the user is satisfied with the appearance of the display
-			puts "In the above board, does tile A1 appear black to you?\n"
-			response = gets.chomp
-			if response.downcase == "yes"
-				if self.first_negquery == true
-					puts "\nGood. Let's get started then."
-					self.first_negquery = false
-				end
-				break
-			elsif response.downcase == "no"
-				$neg_display = !$neg_display
-				Boardstate.new(nil, nil).display
-				"How about now?"
-			else
-				puts "Sorry, I didn't understand that."
-			end
+		until yesno_prompt("In the above board, does tile A1 appear black?\n") do
+			$neg_display = !$neg_display
+			Boardstate.new(nil, nil).display
+			puts "How about now?"
+		end
+		self.first_negquery_message
+	end
+	def first_negquery_message
+		if self.first_negquery == true
+			puts "\nGood. Let's get started then."
+			self.first_negquery = false
 		end
 	end
 	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
@@ -1401,10 +1502,10 @@ class MainMenu
 	end
 	def display_scoreboard #future improvement: add name feature, add the ability to save and load scoreboards, probably change this entirely to deal with a large number of player names
 		loop do #keeps asking until it gets a valid input
-			puts "\nWhich scoreboard would you like to view?"
-			puts %Q(You can say "human vs human", "human vs AI", "both", or "back".\n)
+			puts '\nIf you would like to view the entire scoreboard, say "all"'
+			puts 'If you would like to compare only two players, say "compare"'
 			response = gets.chomp.downcase
-			if response == "human vs human"
+			if response == "all"
 				puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
 				puts "Player 2 has #{$pvp_scoreboard[1]} point(s)."
 				break
