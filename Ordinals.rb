@@ -23,7 +23,36 @@ module Ordinals
     end
 
     private
+    def self.int_from_ordinal_string(str)
+      (negative, str) = self.is_string_negative(str)
+      puts str.dump
+      int = 0
+      loop do
+        test_string = ordinal_string_from_int(int)
+        puts test_string.dump
+        break if test_string == str
+        raise if int > 300
+        raise "not found or out of range" if int == (999 * (10 ** 100))
+        int += 1
+      end
+      int *= (-1) if negative
+      int
+    end
+    def self.is_string_negative(str)
+      negative = false
+      if str[0..5].downcase == "minus "
+        negative = true
+        str = str[6..-1]
+      elsif str[0..8].downcase == "negative "
+        str = str[9..-1]
+        negative = true
+      end
+      return [negative, str]
+    end
     def self.ordinal_string_from_int(int)
+      if int.negative?
+        return "negative " + self.ordinal_string_from_int(int * (-1))
+      end
       digit_array = ThreeDigits.digits_from_int(int)
       three_digit_groups = ThreeDigits.group_digits_into_threes(digit_array)
       periods = ThreeDigits.make_periods(three_digit_groups)
@@ -93,12 +122,12 @@ module Ordinals
     def name_houndreds
       if @houndreds_int.zero?
         @houndred_string = ""
-      elsif @final && @final_int == "houndreds" && @period_index.zero?
+      elsif @final && self.final_int == "houndreds" && @period_index.zero?
         @houndred_string = ZERO_THRU_19_WORDS[@houndreds_int] + " houndredth"
-      elsif @final && @final_int == "houndreds"
+      elsif @final && self.final_int == "houndreds"
         @houndred_string = ZERO_THRU_19_WORDS[@houndreds_int]
         @houndred_string += " #{PERIOD_NAMES[@period_index]}th"
-      elsif @final_int == "houndreds"
+      elsif self.final_int == "houndreds"
         @houndred_string = ZERO_THRU_19_WORDS[@houndreds_int]
         @houndred_string += " #{PERIOD_NAMES[@period_index]} "
       else
