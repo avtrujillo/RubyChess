@@ -1,6 +1,7 @@
 # the word "bug" in comments will be used to flag unfixed bugs
-
+require_relative('./Ordinals')
 require 'yaml'
+
 Dir.chdir("/home/alex/Desktop/Ruby/Chess")
 
 $needs_testing = false #used for debugging
@@ -128,8 +129,6 @@ class Game
 		@name = "#{players[0]} vs #{players[1]} #{started}"
 		#to be used when saving and loading games
 		@history = []
-		#gonna try moving the line commented out below to game.play
-		#@boardstate.movelist = generate_valid_moves(@boardstate)
 	end
 	def moving_team
 		self.simlevels.first.moving_team
@@ -147,36 +146,55 @@ class Game
 		$playing = false
 		true
 	end
-	def move_to_save_directory
+	def self.move_to_save_directory
 		save_dir = Dir.entries("/home/alex/Desktop/Ruby/Chess").find {|f|
 			File.directory?(f) && File.basename(f) == "SavedGames"
 		}
-		Dir.chdir(save_dir ||= Dir.mkdir("SavedGames")
+		puts save_dir
+		Dir.chdir(save_dir ||= Dir.mkdir("SavedGames"))
 	end
 	def save
-		self.move_to_save_directory
+		self.class.move_to_save_directory
 		game_save = File.open("#{self.name}.yaml", "w")
 		game_save.puts(YAML.dump(self))
 		game_save.close
 	end
-	def load
+	def self.load
 		self.move_to_save_directory
-		game_file = File.open(self.find_save, "r")
+		players = load_prompt
+		return nil unless players.count == 2
+		game_name = self.find_save(players[0], players[1])
+		return nil unless game_name
+		puts game_name
+		game_file = File.open(game_name, "r")
 		loaded_game = YAML.load(game_file.read)
 		game_file.close
 		loaded_game
 	end
-	def load_prompt
-		messages = []
+	def self.load_prompt
 		players = []
+		count = 1
 		loop do
-			"What is the name of the first player?"
-			player1 = gets.chomp
-			Player.search_roster(player1)
+			puts "What is the name of Player #{count}?"
+			puts "You can also say \"back\" to cancel"
+			response = gets.chomp
+			break if response == "back"
+			Dir.chdir("..")
+			player = Player.search_roster(response)
+			Dir.chdir("./SavedGames")
+			if player
+				players.push(player)
+				count += 1
+				break if count > 2
+			else
+				puts "Sorry, I couldn't find that player"
+			end
+		end
+		players
 	end
-	def find_save(player1, player2)
+	def self.find_save(player1, player2)
 		saved_games = self.list_saves(player1, player2)
-		return nil unless saved_games
+		(puts "\nNo matching games"; return nil) unless saved_games && !saved_games.empty?
 		loop do
 			puts "What is the number of the game you want to load?"
 			begin
@@ -187,15 +205,19 @@ class Game
 			end
 		end
 	end
-	def list_saves(player1, player2)
-		pstring = "#{player1} vs #{player2}"
-		saved_games = Dir.entries(Dir.pwd).select {|save|
-			save.length < pstring.length &&
-			File.basename(save)[0...pstring.length] == pstring
-		}
+	def self.list_saves(player1, player2)
+		pstring1 = "#{player1.name} vs #{player2.name}"
+		pstring2 = "#{player2.name} vs #{player1.name}"
+		saved_games = []
+		[pstring1, pstring2].each do |pstring|
+			saved_games += Dir.entries(Dir.pwd).select {|save|
+				save.length > pstring.length &&
+				save[0...pstring.length].to_s == pstring
+			}
+		end
 		saved_games.each do |save|
 			print "#{(saved_games.index(save) + 1).to_s}. "
-			puts "#{File.basename[pstring.length..(-1)]}"
+			puts "#{save}"
 		end
 		saved_games
 	end
@@ -1481,21 +1503,26 @@ class MainMenu
 	end
 	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
 		loop do #future improvement: options to save and load games/scoreboards
-			puts %Q(\nWhat would you like to do? You can say "new game",\n"view scoreboard" "change display colors", or "close"\n ) #reminder: add the ability to load games
+			puts %Q(\nWhat would you like to do? You can say "new game", "load game")
+			puts %Q("view scoreboard", "change display colors", or "close"\n ) #reminder: add the ability to load games
 			response = gets.chomp.downcase
 			break if self.main_menu_execute(response) == "close_chess"
 		end
 	end
 	def main_menu_execute(response)
-		if response == "new game"
+		case response
+		when "new game"
 			self.start_new_game
-		elsif response == "view scoreboard"
+		when "view scoreboard"
 			self.display_scoreboard
-		elsif response == "change display colors"
+		when "change display colors"
 			self.negquery
-		elsif response == "close"
+		when "close"
 			self.close_chess #reminder: how should this work?
 			return "close_chess"
+		when "load game"
+			loaded_game = Game.load
+			loaded_game.play if loaded_game
 		else
 			puts "Sorry, I didn't understand that."
 		end

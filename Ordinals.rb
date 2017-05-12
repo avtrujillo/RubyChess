@@ -31,7 +31,6 @@ module Ordinals
         test_string = ordinal_string_from_int(int)
         puts test_string.dump
         break if test_string == str
-        raise if int > 300
         raise "not found or out of range" if int == (999 * (10 ** 100))
         int += 1
       end
