@@ -8,10 +8,7 @@ $needs_testing = false #used for debugging
 
 $neg_display = true # controls whether or not to invert the black and white colors in the display
 
-$pvp_scoreboard = [0, 0]
-$AI_scoreboard = [0, 0]
-
-module YesNo
+module UserPrompt
 	def yesno_prompt(message)
 		loop do
 			puts message
@@ -26,17 +23,31 @@ module YesNo
 			end
 		end
 	end
+	def open_ended_prompt(prompt_message)
+		raise "message must be a string" unless prompt_message.is_a?(String)
+		puts prompt_message
+		response = gets.chomp
+	end
 end
 
 
 class Scoreboard
-	def initialize(games, players)
-		saved_games = File.open
+	def initialize(player1, player2)
+		@players = [player1, player2]
+		@player1 = player1
+		@player2 = player2
+		@games = player1.games.find {|game| game.player == player2}
+		@player_1_wins = games.select {|game| game.winner = player1}
+		@player_2_wins = games.select {|game| game.winner = player2}
+	 	@draws = games.select {|game| game.winner = "draw"} #reminder: use this notation
+		@unfinished = games.select {|game| game.winner = "dnf"}
+	end
+	def display_scoreboard
 		#unfinished
 	end
 	def self.display_prompt
 		loop do
-			puts '\nIf you would like to view the entire scoreboard, say "all"'
+			puts "\nIf you would like to view the entire scoreboard, say \"all\""
 			puts 'If you would like to compare only two players, say "compare"'
 			puts 'You can also say "back" to go back'
 			response = gets.chomp.downcase
@@ -53,8 +64,10 @@ class Scoreboard
 		end
 	end
 	def self.display_all
-		puts "This is a placeholder for Scoreboard.display_all!"
-		#unfinished
+		scoreboards =	Player.roster.permutation(2)
+		scoreboards.uniq! {|sb| sb.sort}
+		scoreboards.map! {|sb| Scoreboard.new(sb[0], sb[1])}
+		# unfinished
 	end
 	def self.compare_prompt
 		puts "What is the name of the first player?"
@@ -106,9 +119,9 @@ end
 $coordinates = []
 
 class Game
-	include YesNo
+	extend UserPrompt
 	attr_accessor :simlevels, :white_team, :black_team, :history, :pieces,
-	:board, :tiles, :boardstate, :ended,  :white_player, :black_player
+	:board, :tiles, :boardstate, :ended,  :white_player, :black_player, :players
 	attr_reader :name, :started
 	def initialize(white_player, black_player)
 		@started = Time.now
@@ -125,10 +138,14 @@ class Game
 		@simlevels.push(self.boardstate)
 		@simlevels.push(Simlevel.new(self, [[]], 0))
 		@simlevels.push(Simlevel.new(self, [[]], -1))
-		players = [@black_player.name, @white_player.name].sort
-		@name = "#{players[0]} vs #{players[1]} #{started}"
+		@players = [@black_player.name, @white_player.name].sort
+		@name = "#{@players[0]} vs #{@players[1]} #{started}"
+		@players.each do |player|
+			player.games << self #reminder: update when saving or finishing
+		end
 		#to be used when saving and loading games
 		@history = []
+		@winner = nil #reminder: use this
 	end
 	def moving_team
 		self.simlevels.first.moving_team
@@ -141,8 +158,8 @@ class Game
 		end
 	end
 	def exit_game
-		return false unless yesno_prompt("Are you sure you want to quit")
-		self.save if yesno_prompt("Would you like to save your game?")
+		return false unless Game.yesno_prompt("Are you sure you want to quit")
+		self.save if Game.yesno_prompt("Would you like to save your game?")
 		$playing = false
 		true
 	end
@@ -175,9 +192,7 @@ class Game
 		players = []
 		count = 1
 		loop do
-			puts "What is the name of Player #{count}?"
-			puts "You can also say \"back\" to cancel"
-			response = gets.chomp
+			response = self.open_ended_prompt("What is the name of Player #{count}? \nYou can also say \"back\" to cancel")
 			break if response == "back"
 			Dir.chdir("..")
 			player = Player.search_roster(response)
@@ -279,7 +294,7 @@ class Snapshot
 end
 
 class Boardstate #redundant, but makes things easier to read
-	attr_accessor :game, :tiles, :board, :board, :pieces, :depth, :turn_counter,
+	attr_accessor :game, :tiles, :board, :pieces, :depth, :turn_counter,
 	:moving_team, :fifty_move_counter, :game_over, :movelist
 	def initialize(game, pieces, depth = 0)
 		@game = game
@@ -1075,13 +1090,17 @@ class Team
 end
 
 class Player #will probably be used in save states later
-	attr_accessor :color, :name
+	attr_accessor :color, :name, :games
 	@@roster = []
 	def initialize(color, name)
 		@color = color #this may change from game to game
 		@name = name.upcase
+		@games = []
 		@@roster.push(self)
 		Player.sync_players
+	end
+	def opposite_player(game)
+		game.players.find {|player| player.name != self.name}
 	end
 	def self.search_roster(name)
 		Player.sync_players
@@ -1114,6 +1133,7 @@ class Player #will probably be used in save states later
 			end
 		end
 		@@roster = saved_players
+		@@roster.sort_by!{|player| player.name}
 		self.save_players
 	end
 	def self.save_players
@@ -1356,7 +1376,7 @@ if $needs_testing == true # this step is ony for debugging
 end
 
 class TurnMenu
-	include YesNo
+	extend UserPrompt
 	attr_accessor :game, :boardstate
 	def initialize(game)
 		@game = game
@@ -1391,6 +1411,7 @@ class TurnMenu
 			response = gets.chomp.upcase
 			if (response.length == 2)
 				self.human_move(response, movelist)
+				break
 			elsif response == "MOVE HISTORY"
 				self.move_history_prompt #unfinished: add this
 				self.boardstate.display
@@ -1470,12 +1491,12 @@ class TurnMenu
 	def draw_prompt
 		prompt_message = "Do both players agree to a draw?" #future improvement: maybe have some mechanism to ask both players?
 		response = gets.chomp.downcase
-		self.game_over(nil, "draw") if yesno_prompt(prompt_message)
+		self.game_over(nil, "draw") if TurnMenu.yesno_prompt(prompt_message)
 	end
 end
 
 class MainMenu
-	include YesNo
+	extend UserPrompt
 	attr_accessor :game, :first_negquery
 	def initialize
 		@first_negquery = true
@@ -1488,7 +1509,7 @@ class MainMenu
 			puts "Hi, welcome to chess!"
 			puts "Before we begin I need your help to set the display.\n"
 		end
-		until yesno_prompt("In the above board, does tile A1 appear black?\n") do
+		until MainMenu.yesno_prompt("In the above board, does tile A1 appear black?\n") do
 			$neg_display = !$neg_display
 			Boardstate.new(nil, nil).display
 			puts "How about now?"
@@ -1564,9 +1585,6 @@ class MainMenu
 		end
 	end
 	def start_new_game #unfinished, need to add protocols for ending the game (updating scoreboard etc)
-		# reminder: fix everything related to AI vs AI games
-		# future improvement: add the ability to save and load players
-		# reminder: make sure this can distinguish new players from old ones
 		player_names = self.player_name_prompt
 		white_name = player_names["white"]
 		black_name = player_names["black"]
