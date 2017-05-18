@@ -1707,6 +1707,8 @@ class MainMenu
 			Game.load_from_path("/SaveData/Games/Unsaved/" + unsaved_games.first, start_from).play
 		elsif !unsaved_games.empty? && MainMenu.yesno_prompt(message2)
 			Game.load_from_path("/SaveData/Games/Unsaved/" + unsaved_games.first, start_from).save
+		else
+			File.delete(start_from + "/SaveData/Games/Unsaved/" + unsaved_games.first)
 		end
 	end
 	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
