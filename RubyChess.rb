@@ -1,5 +1,6 @@
 # the word "bug" in comments will be used to flag unfixed bugs
-Dir.chdir("/home/alex/Desktop/Ruby/Chess")
+$home_dir = ARGV.pop || "/home/alex/Desktop/Ruby/Chess"
+Dir.chdir($home_dir)
 require_relative('./Ordinals')
 require 'yaml'
 
@@ -12,7 +13,7 @@ module ChessDir
 		parent_path = "/" + parent_path unless parent_path[0] == "/"
 		parent_path
 	end
-	def chdir_or_mkdir(dir_arg, start_from = "/home/alex/Desktop/Ruby/Chess")
+	def chdir_or_mkdir(dir_arg, start_from = $home_dir)
 		dir_arg = dir_arg[1..-1] if dir_arg [0] == "/"
 		Dir.chdir(parent_dir_of(start_from + "/" + dir_arg))
 		arg_basename = dir_arg.split("/").last
@@ -22,12 +23,12 @@ module ChessDir
 			Dir.mkdir(arg_basename)
 		end
 	end
-	def chdir_or_mkdir_all(start_from = "/home/alex/Desktop/Ruby/Chess")
+	def chdir_or_mkdir_all(start_from = $home_dir)
 		save_dirs = ["/SaveData", "/SaveData/Games", "/SaveData/Games/Unsaved",
 		"/SaveData/Games/Unfinished", "/SaveData/Games/Finished", "/SaveData/Players"]
 		save_dirs.each {|save_dir| self.chdir_or_mkdir(save_dir, start_from)}
 	end
-	def move_to_save_directory(save_dir, start_from = "/home/alex/Desktop/Ruby/Chess")
+	def move_to_save_directory(save_dir, start_from = $home_dir)
 		path_array = save_dir.split("/")
 		if (path_array.last == "Players") || path_array.last == "Games"
 			Dir.chdir(start_from + "/SaveData/" + path_array.last)
@@ -218,7 +219,7 @@ class Game
 		end
 		@saved = false
 		@history = []
-		@winner = nil #reminder: use this
+		@winner = nil
 	end
 	def display_move_history
 		@history.each {|move| puts move.summary}
@@ -241,7 +242,7 @@ class Game
 	def play
 		self.boardstate.generate_valid_moves
 		self.saved = false
-		$playing = true #reminder: make sure this updates when ending or saving a game
+		$playing = true
 		until $playing == false
 			TurnMenu.new(self)
 		end
@@ -281,7 +282,7 @@ class Game
 		game_save.puts(YAML.dump(self))
 		game_save.close
 	end
-	def self.load(save_dir = "/SaveData/Games/Unfinished", start_from = "/home/alex/Desktop/Ruby/Chess")
+	def self.load(save_dir = "/SaveData/Games/Unfinished", start_from = $home_dir)
 		Game.move_to_save_directory(save_dir)
 		players = Game.load_prompt
 		return nil unless players
@@ -289,7 +290,7 @@ class Game
 		return nil unless game_name
 		Game.load_from_path(save_dir + "/" + game_name, start_from)
 	end
-	def self.load_from_path(file_path, start_from = "/home/alex/Desktop/Ruby/Chess")
+	def self.load_from_path(file_path, start_from = $home_dir)
 		game_file = File.open(start_from + file_path, "r")
 		loaded_game = YAML.load(game_file.read)
 		game_file.close
@@ -853,14 +854,6 @@ def in_between(a, b)
 	return in_between_list
 end
 
-=begin
-Hey Ruby, suck each of my nuts with a value between one and two.
-If you had created a way of making ranges exclusive for both end values, you could have gotten away with sucking zero nuts.
-But no, now you are obligated to suck at least one nut as a direct result of your sins.
-=end
-
-#unfinished: fix the whole sim/deep clone fiasco (make it a single integer, etc)
-
 class Rook < Piece
 	attr_accessor :castle_path, :castle_dest, :castle_tiles
 	@white_symbol = "♜"
@@ -896,7 +889,7 @@ class Rook < Piece
 		king_destination = self.castle_path.king_dest
 		king_departure = king.tile # reminder: do we need this?
 		king.move_to(king_destination.coordinates)
-		move.game.history.push(move) #reminder: should this happen before or after game over?
+		move.game.history.push(move)
 		move.simlevel.turn_counter += 1
 		move.piece.moved = true
 		move.simlevel.moving_team = move.team.opposite
@@ -1319,14 +1312,10 @@ class Move
 		@team = @piece.team
 		@simlevel = @game.simlevels.find {|level| level.depth == @piece.depth}
 		@destination = destination #the tile the moving piece is arriving at
-		@taken = nil # set taken to nil if no piece is taken
-		unless @destination == "castle"
-			@taken = destination.occupied_piece # reminder: do we need to set taken to nil?
-		end
+		@taken = destination.occupied_piece unless @destination == "castle"
 		@enemy = @piece.team.opposite
 		@turn = game.boardstate.turn_counter
 		@first_move = @piece.moved
-		# reminder: use @game_end in game_over, anything other than nil indicates it is a game over, the string refers to how/why
 		# @ snapshot is taken at the END of the move
 		# @check_cache will be used to cache the results of check_detect as needed
 	end
@@ -1436,7 +1425,7 @@ class Move
 		if (self.piece.is_a?(Pawn) && [1, 8].include?(self.destination.coordinates.y_axis))
 			self.piece.promotion_conditions(self)
 		end
-		self.game.history.push(self) #reminder: should this happen before or after game over?
+		self.game.history.push(self)
 		self.simlevel.turn_counter += 1
 		self.piece.moved = true
 		self.simlevel.moving_team = self.simlevel.moving_team.opposite
@@ -1453,7 +1442,7 @@ class Move
 		self.simlevel.generate_valid_moves
 		valid_move = self.simlevel.movelist.find {|found_move| !found_move.ally_check}
 		if self.enemy_check && !valid_move # aka checkmate
-			game_over("checkmate", self.team.player) #reminder: the game_over method will pobably be made part of the game class
+			game_over("checkmate", self.team.player)
 		elsif !valid_move # aka stalemate
 			game_over("stalemate", self.team.player)
 		end
@@ -1464,7 +1453,7 @@ class Move
 			puts "The board has already been in this state before. If this happens\nagain, the game will result in a draw."
 		elsif identical_moves.count == 3
 			puts "The board has been in this state three times. The game ends in a draw."
-			game_over("three moves", "draw") # reminder: the game_over method will pobably be made part of the game class
+			game_over("three moves", "draw")
 		end
 	end
 	def fifty_move_rule
@@ -1579,14 +1568,14 @@ class TurnMenu
 				break
 			elsif response == "MOVE HISTORY"
 				@game.display_move_history
-			elsif response == "SURRENDER" #unfinished: need to add a "game over" method
-				self.game_over("surrender", @game.moving_team.opposite.player) #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
+			elsif response == "SURRENDER"
+				self.game_over("surrender", @game.moving_team.opposite.player)
 				break
 			elsif response == "DRAW"
 				self.draw_prompt
-				break # reminder: this just causes human)_turn_prompt to be called again
+				break
 			elsif response == "EXIT"
-				return "game exited" if self.boardstate.game.exit_game #reminder: make this
+				return "game exited" if self.boardstate.game.exit_game
 				break
 			else
 				puts "Sorry, I didn't understand that."
@@ -1694,7 +1683,7 @@ class MainMenu
 			return nil
 		end
 	end
-	def unsaved_game_prompt(start_from = "/home/alex/Desktop/Ruby/Chess")
+	def unsaved_game_prompt(start_from = $home_dir)
 		unsaved_games = Dir.entries(start_from + "/SaveData/Games/Unsaved")
 		unsaved_games.select! {|entry| entry[-5..-1] == ".yaml"}
 		message1 = "I see that you had an unsaved game when the program last closed."
@@ -1741,7 +1730,7 @@ class MainMenu
 			puts "Sorry, both teams cannot have the same player."
 		end
 	end
-	def start_new_game #unfinished, need to add protocols for ending the game (updating scoreboard etc)
+	def start_new_game
 		player_names = self.player_name_prompt
 		white_name = player_names["white"]
 		black_name = player_names["black"]
