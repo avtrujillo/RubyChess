@@ -194,7 +194,7 @@ class Game
 	extend ChessDir
 	attr_accessor :simlevels, :white_team, :black_team, :history, :pieces,
 	:board, :tiles, :boardstate, :ended,  :white_player, :black_player, :saved
-	attr_reader :name, :started, :winner
+	attr_reader :name, :started, :winner, :game_over_cause, :final_move
 	def initialize(white_player, black_player)
 		@started = Time.now
 		@white_player = white_player
@@ -217,9 +217,11 @@ class Game
 			player.games << self #reminder: update when saving or finishing
 		end
 		@saved = false
-		#to be used when saving and loading games
 		@history = []
 		@winner = nil #reminder: use this
+	end
+	def display_move_history
+		@history.each {|move| puts move.summary}
 	end
 	def players
 		@player_names.map do |name|
@@ -252,6 +254,14 @@ class Game
 		$playing = false
 		true
 	end
+	def game_over(cause, winner)
+		@ended = Time.now
+		@game_over_cause = cause
+		@final_move = @history.last
+		@winner = winner
+		self.save
+		$playing = false
+	end
 	def save_directory
 		game_dir = "/SaveData/Games"
 		if self.ended
@@ -264,7 +274,9 @@ class Game
 	end
 	def save(saved = true)
 		self.saved = saved
+		File.delete(@last_save_path) if @last_save_path
 		Game.move_to_save_directory(self.save_directory)
+		@last_save_path = "#{Dir.pwd}/#{self.name}.yaml"
 		game_save = File.open("#{self.name}.yaml", "w")
 		game_save.puts(YAML.dump(self))
 		game_save.close
@@ -891,9 +903,9 @@ class Rook < Piece
 		move.snapshot = Snapshot.new(move.simlevel)
 		move.simlevel.generate_valid_moves
 		if (move.enemy_check == true) && (move.simevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
-			game_over(move, checkmate)
+			game_over("checkmate", move.team.player)
 		elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
-			game_over(move, stalemate)
+			game_over("stalemate", "draw")
 		end
 		# move.game.boardstate.display
 		if (move.enemy_check == true)
@@ -1318,6 +1330,15 @@ class Move
 		# @ snapshot is taken at the END of the move
 		# @check_cache will be used to cache the results of check_detect as needed
 	end
+	def summary
+		sumry = "\nMove ##{self.move_number}: #{team.player.name} moves their #{piece.title}"
+		sumry += "from #{departure.name} to #{destination.name}. Check = #{self.enemy_check}"
+		sumry += "#{taken.name} taken" if taken
+		sumry
+	end
+	def move_number
+		self.game.history.find_index(self) + 1
+	end
 	def white_check
 		if self.team == self.game.white_team
 			return self.ally_check
@@ -1432,9 +1453,9 @@ class Move
 		self.simlevel.generate_valid_moves
 		valid_move = self.simlevel.movelist.find {|found_move| !found_move.ally_check}
 		if self.enemy_check && !valid_move # aka checkmate
-			game_over(self, "checkmate") #reminder: the game_over method will pobably be made part of the game class
+			game_over("checkmate", self.team.player) #reminder: the game_over method will pobably be made part of the game class
 		elsif !valid_move # aka stalemate
-			game_over(self, "stalemate")
+			game_over("stalemate", self.team.player)
 		end
 	end
 	def three_move_rule
@@ -1443,7 +1464,7 @@ class Move
 			puts "The board has already been in this state before. If this happens\nagain, the game will result in a draw."
 		elsif identical_moves.count == 3
 			puts "The board has been in this state three times. The game ends in a draw."
-			game_over("three moves") # reminder: the game_over method will pobably be made part of the game class
+			game_over("three moves", "draw") # reminder: the game_over method will pobably be made part of the game class
 		end
 	end
 	def fifty_move_rule
@@ -1451,7 +1472,7 @@ class Move
 		fmc = self.simlevel.fifty_move_counter
 		fmc += 1 unless self.taken || self.piece.is_a?(Pawn)
 		if fmc == 50
-			game_over(self, "fifty moves")
+			game_over("fifty moves", "draw")
 		elsif fmc > 19 && (fmc % 10 == 0) || (50 - fmc < 10)
 			puts "It has been #{fmc.to_s} moves since a pawn has been"
 			puts "moved or a piece has been taken."
@@ -1557,10 +1578,9 @@ class TurnMenu
 				self.human_move(response, movelist)
 				break
 			elsif response == "MOVE HISTORY"
-				self.move_history_prompt #unfinished: add this
-				self.boardstate.display
+				@game.display_move_history
 			elsif response == "SURRENDER" #unfinished: need to add a "game over" method
-				self.game_over(nil, "surrender") #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
+				self.game_over("surrender", @game.moving_team.opposite.player) #reminder: make sure that the game_over method can handle surrenders with nil moves (the surrender is credited to the previous move)
 				break
 			elsif response == "DRAW"
 				self.draw_prompt
@@ -1634,8 +1654,7 @@ class TurnMenu
 	end
 	def draw_prompt
 		prompt_message = "Do both players agree to a draw?" #future improvement: maybe have some mechanism to ask both players?
-		response = gets.chomp.downcase
-		self.game_over(nil, "draw") if TurnMenu.yesno_prompt(prompt_message)
+		self.game.game_over("agreed to draw", "draw") if TurnMenu.yesno_prompt(prompt_message)
 	end
 end
 
