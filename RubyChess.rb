@@ -1,8 +1,35 @@
 # the word "bug" in comments will be used to flag unfixed bugs
+Dir.chdir("/home/alex/Desktop/Ruby/Chess")
 require_relative('./Ordinals')
 require 'yaml'
 
-Dir.chdir("/home/alex/Desktop/Ruby/Chess")
+module ChessDir
+	public
+	def chdir_or_mkdir(dir_arg, start_from = "/home/alex/Desktop/Ruby/Chess")
+		dir_arg = dir_arg[1..-1] if dir_arg [0] == "/"
+		Dir.chdir(start_from)
+		existing_dir = Dir.entries(Dir.pwd).find do |f|
+			File.directory?(f) &&
+			File.absolute_path(f) == "/home/alex/Desktop/Ruby/Chess/" + dir_arg
+		end
+		Dir.mkdir(dir_arg) unless existing_dir
+		Dir.chdir("./#{dir_arg}")
+	end
+	def chdir_or_mkdir_all(start_from = "/home/alex/Desktop/Ruby/Chess")
+		save_dirs = ["/SaveData", "/SaveData/Games", "/SaveData/Games/Unsaved",
+		"/SaveData/Games/Unfinished", "/SaveData/Games/Finished"]
+		save_dirs.each {|save_dir| self.chdir_or_mkdir(save_dir, start_from)}
+	end
+	def move_to_save_directory
+		Dir.chdir("/home/alex/Desktop/Ruby/Chess")
+		save_dir = Dir.entries("/home/alex/Desktop/Ruby/Chess").find {|f|
+			File.directory?(f) &&
+			File.absolute_path(f) == "/home/alex/Desktop/Ruby/Chess/SavedGames"
+		}
+		Dir.mkdir("SavedGames") unless save_dir
+		Dir.chdir("/home/alex/Desktop/Ruby/Chess/SavedGames")
+	end
+end
 
 $needs_testing = false #used for debugging
 
@@ -28,57 +55,93 @@ module UserPrompt
 		puts prompt_message
 		response = gets.chomp
 	end
+	def prompt_until_valid(prompt_message, lam, err_message, *args)
+		err_message = "Sorry, I didn't understand that" if err_message.nil?
+		loop do
+			response = open_ended_prompt(prompt_message)
+			lam_hash = lam.call(response, *args)
+			if lam_hash && (lam_hash[:return] || lam_hash[:valid?])
+				return (lam_hash[:return])
+			else
+				puts (lam_hash.nil? ? err_message : lam_hash[:error])
+			end
+		end
+	end
 end
 
 
 class Scoreboard
+	extend UserPrompt
+	attr_accessor :games
+	attr_reader :player1, :player2, :players, :games, :draws, :unfinished,
+	:player_1_wins, :player_2_wins, :player_1_wins_white, :player_1_wins_black
 	def initialize(player1, player2)
-		@players = [player1, player2]
 		@player1 = player1
 		@player2 = player2
-		@games = player1.games.find {|game| game.player == player2}
+		@players = [player1, player2]
+		@games = player1.games.select {|game| game.player_names.include?(player2.name)}
 		@player_1_wins = games.select {|game| game.winner = player1}
+		@player_1_wins_white = @player_1_wins.select {|game| game.winner.color == "white"}
+		@player_1_wins_black = @player_1_wins.select {|game| game.winner.color == "black"}
 		@player_2_wins = games.select {|game| game.winner = player2}
-	 	@draws = games.select {|game| game.winner = "draw"} #reminder: use this notation
-		@unfinished = games.select {|game| game.winner = "dnf"}
+	 	@draws = games.select {|game| game.winner = "draw"}
+		@unfinished = games.select {|game| game.winner = "dnf" || game.winner.nil?}
 	end
-	def display_scoreboard
-		#unfinished
+	def display
+		puts "\n#{@player1.name} vs #{@player2.name}"
+		puts @player_1_wins.count.to_s + "-" + @player_2_wins.count.to_s
+		p1_losses_white = (@player_1_wins.count - @player_1_wins_white.count).to_s
+		puts "With #{@player1.name} as white: #{@player_1_wins_white.count.to_s}-#{p1_losses_white}"
+		p1_losses_black = (@player_1_wins.count - @player_1_wins_black.count).to_s
+		puts "With #{@player1.name} as black: #{@player_1_wins_black.count.to_s}-#{p1_losses_black}"
+		puts @draws.count.to_s + " draws"
+		puts @unfinished.count.to_s + " unfinished\n"
+	end
+	DISP_PROMPT_LAM = lambda do |response|
+		if ["all", "compare", "back"].include?(response.downcase!)
+			return {return: response}
+		else
+			return nil
+		end
 	end
 	def self.display_prompt
-		loop do
-			puts "\nIf you would like to view the entire scoreboard, say \"all\""
-			puts 'If you would like to compare only two players, say "compare"'
-			puts 'You can also say "back" to go back'
-			response = gets.chomp.downcase
-			return response if ["all", "compare", "back"].include?(response)
-			puts "Sorry, I didn't understand that"
+		message = "If you would like to view the entire scoreboard, say \"all\"\n"
+		message += 'If you would like to compare only two players, say "compare"'
+		message += "\nYou can also say \"back\" to go back"
+		disp_prompt_lam = lambda do |response|
+			response.downcase!
+			validity = ["all", "compare", "back"].include?(response)
+			validity ? (return {return: response}) : (return nil)
 		end
+		self.prompt_until_valid(message, disp_prompt_lam, nil)
 	end
 	def self.display_menu
 		response = self.display_prompt
 		if response == "all"
 			Scoreboard.display_all
 		elsif response == "compare"
-			Scoreboard.compare_prompt
+			players = Scoreboard.compare_prompt
+			Scoreboard.new(players[0], players[1]).display
+		elsif response == "back"
+			return nil
 		end
 	end
 	def self.display_all
-		scoreboards =	Player.roster.permutation(2)
-		scoreboards.uniq! {|sb| sb.sort}
-		scoreboards.map! {|sb| Scoreboard.new(sb[0], sb[1])}
-		# unfinished
+		player_pairs =	Player.roster.permutation(2).to_a
+		player_sort = Proc.new {|player1, player2| player1.name <=> player2.name}
+		player_pairs.uniq! {|pair| pair.sort(&player_sort)}
+		player_pairs.each {|pair| Scoreboard.new(pair[0], pair[1]).display}
 	end
 	def self.compare_prompt
-		puts "What is the name of the first player?"
-		player1 = Player.search_roster(gets.chomp.upcase)
-		puts "What is the name of the second player?"
-		player2 = Player.search_roster(gets.chomp.upcase)
-		self.display_comparison(player1, player2)
-	end
-	def display_comparison(player1, player2)
-		puts "This is a placeholder for Scoreboard.display_comparison!"
-		#unfinished
+		compare_lam = lambda do |name|
+			player = Player.search_roster(name.upcase)
+			player ? (return {return: player}) : (return nil)
+		end
+		[1, 2].map do |n|
+			ord = Odrinal.ordinal_string_from_int(n)
+			prompt_message = "What is the name of the #{ord} player?"
+			prompt_until_valid(prompt_message, compare_lam, nil)
+		end
 	end
 end
 
@@ -120,8 +183,9 @@ $coordinates = []
 
 class Game
 	extend UserPrompt
+	extend ChessDir
 	attr_accessor :simlevels, :white_team, :black_team, :history, :pieces,
-	:board, :tiles, :boardstate, :ended,  :white_player, :black_player, :players
+	:board, :tiles, :boardstate, :ended,  :white_player, :black_player
 	attr_reader :name, :started
 	def initialize(white_player, black_player)
 		@started = Time.now
@@ -138,14 +202,26 @@ class Game
 		@simlevels.push(self.boardstate)
 		@simlevels.push(Simlevel.new(self, [[]], 0))
 		@simlevels.push(Simlevel.new(self, [[]], -1))
-		@players = [@black_player.name, @white_player.name].sort
-		@name = "#{@players[0]} vs #{@players[1]} #{started}"
+		@player_names = [@black_player.name, @white_player.name].sort
+		@name = "#{@player_names[0]} vs #{@player_names[1]} #{started}"
 		@players.each do |player|
 			player.games << self #reminder: update when saving or finishing
 		end
 		#to be used when saving and loading games
 		@history = []
 		@winner = nil #reminder: use this
+	end
+	def players
+		@player_names.map do |name|
+			Player.roster.find {|player| player.name == name}
+		end
+	end
+	def player_names
+		if @player_names
+			return @player_names
+		else
+			@player_names = [@white_player.name, @black_player.name]
+		end
 	end
 	def moving_team
 		self.simlevels.first.moving_team
@@ -163,13 +239,6 @@ class Game
 		$playing = false
 		true
 	end
-	def self.move_to_save_directory
-		save_dir = Dir.entries("/home/alex/Desktop/Ruby/Chess").find {|f|
-			File.directory?(f) && File.basename(f) == "SavedGames"
-		}
-		puts save_dir
-		Dir.chdir(save_dir ||= Dir.mkdir("SavedGames"))
-	end
 	def save
 		self.class.move_to_save_directory
 		game_save = File.open("#{self.name}.yaml", "w")
@@ -179,8 +248,8 @@ class Game
 	def self.load
 		self.move_to_save_directory
 		players = load_prompt
-		return nil unless players.count == 2
-		game_name = self.find_save(players[0], players[1])
+		return nil unless players
+		game_name = self.select_save(players[0], players[1])
 		return nil unless game_name
 		puts game_name
 		game_file = File.open(game_name, "r")
@@ -188,36 +257,42 @@ class Game
 		game_file.close
 		loaded_game
 	end
-	def self.load_prompt
-		players = []
-		count = 1
+	PLAYERNAME_PROMPT_LAM = lambda do |response|
 		loop do
-			response = self.open_ended_prompt("What is the name of Player #{count}? \nYou can also say \"back\" to cancel")
-			break if response == "back"
+			return "back" if response == "back"
 			Dir.chdir("..")
 			player = Player.search_roster(response)
 			Dir.chdir("./SavedGames")
 			if player
-				players.push(player)
-				count += 1
-				break if count > 2
+				return player
 			else
 				puts "Sorry, I couldn't find that player"
+				return true
 			end
 		end
-		players
 	end
-	def self.find_save(player1, player2)
+	def self.load_prompt
+		players = []
+		loop do
+			prompt_message = "What is the name of Player #{players.count + 1}?\n"
+			prompt_message += "You can also say \"back\" to cancel"
+			player = self.open_ended_prompt(prompt_message, PLAYERNAME_PROMPT_LAM)
+			return nil if player == "back"
+			players << player if player.is_a?(Player)
+			return players if players.count == 2
+		end
+	end
+	def self.select_save(player1, player2)
 		saved_games = self.list_saves(player1, player2)
 		(puts "\nNo matching games"; return nil) unless saved_games && !saved_games.empty?
-		loop do
-			puts "What is the number of the game you want to load?"
-			begin
-				selected = saved_games[gets.chomp.to_i - 1]
-				selected ? (return selected) : (puts "Sorry, that's not on the list")
-			rescue
-				redo
-			end
+		prompt_message = "What is the number of the game you want to load?\n"
+		prompt_message += "You can also enter 0 to go back"
+		game_index = self.prompt_until_valid(prompt_message, SELECT_SAVE_LAM, nil,
+		(0..saved_games.count))
+		if game_index.zero?
+			return nil
+		else
+			return saved_games[game_index]
 		end
 	end
 	def self.list_saves(player1, player2)
@@ -234,6 +309,35 @@ class Game
 			print "#{(saved_games.index(save) + 1).to_s}. "
 			puts "#{save}"
 		end
+		saved_games
+	end
+	SELECT_SAVE_LAM = lambda do |response, valid_ints|
+		resp_int = response.to_i
+		if resp_int.to_s == response && valid_ints.include?(response)
+			return {valid?: true, return: response}
+		elsif resp_int.to_s == response
+			return {valid?: false, error: "Out of range"}
+		else
+			return {valid?: false, error: "Please respond with an integer"}
+		end
+	end
+	def self.find_all_saves
+		self.move_to_save_directory
+		save_file_names = Dir.entries(Dir.pwd)
+		save_file_names.select {|entry|!File.directory?(entry)}
+		saved_games = save_file_names.map do |name|
+			save_file = File.open(name, "r")
+			game = nil
+			if save_file.is_a?(File) && !File.directory?(save_file)
+				game = YAML.load(save_file.read)
+			else
+				game = nil
+			end
+			save_file.close
+			game
+		end
+		saved_games.select! {|game| game.is_a?(Game)}
+		saved_games.each {|game| raise unless game.is_a?(Game)}
 		saved_games
 	end
 	def create_starting_pieces #returns an array of all pieces in their starting postions
@@ -958,36 +1062,34 @@ class Pawn < Piece
 			self.promotion_prompt(move)
 		end
 	end
-	def promotion_prompt(move)
-		loop do
-			puts "What would you like to promote your pawn to?"
-			response = gets.chomp.capitalize
-			break unless self.promote(response, move)
-			self.promotion_error_message(response)
+	PROMO_KLASSES = [Queen, Knight, Bishop, Rook]
+	PROMO_LAM = lambda do |response, klasses|
+		promo_klass = klasses.find {|klass| klass.to_s == response.capitalize}
+		if response.downcase! == "random"
+			return {return: klasses.sample}
+		elsif promo_klass
+			return {return: promo_klass}
+		elsif (response == "king") || (response == "pawn")
+			return {error: "Sorry, you can't promote to a #{response}."}
+		else
+			return nil
 		end
 	end
-	PROMO_KLASSES = [Queen, Knight, Bishop, Rook]
-	def promote(response, move)
-		promo_klass = PROMO_KLASSES.find {|klass| klass.to_s == response.capitalize}
-		promo_klass = PROMO_KLASSES.sample if response == "Random"
-		return nil unless promo_klass
+	def promotion_prompt(move)
+		promo_klass = prompt_until_valid("What should I promote your pawn to?",
+		PROMO_LAM, PROMO_KLASSES)
+		self.promote(promo_klass, move)
+	end
+	def promote(promo_klass, move)
 		klassmates = self.simlevel.pieces.select {|piece|
 			piece.is_a?(promo_klass) && piece.team == self.team
 		}
 		serial = klassmates.count + 1
-		replacement = promo_klass.new(self.team, self.move.departure.name, serial, self.game, self.depth)
+		replacement = promo_klass.new(self.team, self.move.departure.name,
+		serial, self.game, self.depth)
 		self.coordinates = nil
 		replacement.moved = true
 		replacement
-	end
-	def promotion_error_message(response)
-		if response == "king"
-			puts "Sorry, there can only be one king."
-		elsif response == "pawn"
-			puts "Sorry, you can't promote to a pawn."
-		else
-			puts "Sorry, I didn't understand that."
-		end
 	end
 end
 
@@ -1095,12 +1197,26 @@ class Player #will probably be used in save states later
 	def initialize(color, name)
 		@color = color #this may change from game to game
 		@name = name.upcase
-		@games = []
+		@games = Array.new
 		@@roster.push(self)
 		Player.sync_players
 	end
+	def update_games
+		@games = [] if @games.nil?
+		self_game_names = @games.map {|game| game.name}
+		saved_games = Game.find_all_saves
+		saved_games.select! {|game|
+			raise "#{game.name}" unless game.player_names
+			player_names = game.player_names.map {|player| player.name}
+			player_names.include?(self.name)
+		}
+		to_be_added = saved_games.select {|game|
+			!self_game_names.include?(game.name)
+		}
+		@games += to_be_added
+	end
 	def opposite_player(game)
-		game.players.find {|player| player.name != self.name}
+		game.player_names.find {|name| name != self.name}
 	end
 	def self.search_roster(name)
 		Player.sync_players
@@ -1119,20 +1235,20 @@ class Player #will probably be used in save states later
 			return Player.new(color, name)
 		end
 	end
-	def self.find_saved(name, saved_players)
-		saved_players.find {|saved| saved.name == name}
-	end
 	def self.sync_players
 		saved_players = self.load_players
 		@@roster.each do |existing_player|
-			saved_player = self.find_saved(existing_player.name, saved_players)
+			saved_player = saved_players.find {|saved| saved.name == existing_player.name}
 			if saved_player.nil?
+				existing_player.update_games
 				saved_players.push(existing_player)
 			else
+				existing_player.update_games
 				saved_players[saved_players.index(saved_player)] = existing_player
 			end
 		end
 		@@roster = saved_players
+		@@roster.each {|player| player.update_games}
 		@@roster.sort_by!{|player| player.name}
 		self.save_players
 	end
@@ -1497,8 +1613,10 @@ end
 
 class MainMenu
 	extend UserPrompt
+	extend ChessDir
 	attr_accessor :game, :first_negquery
 	def initialize
+		MainMenu.chdir_or_mkdir_all
 		@first_negquery = true
 		self.negquery
 		self.main_menu_prompt
@@ -1535,7 +1653,7 @@ class MainMenu
 		when "new game"
 			self.start_new_game
 		when "view scoreboard"
-			self.display_scoreboard
+			Scoreboard.display_menu
 		when "change display colors"
 			self.negquery
 		when "close"
@@ -1546,30 +1664,6 @@ class MainMenu
 			loaded_game.play if loaded_game
 		else
 			puts "Sorry, I didn't understand that."
-		end
-	end
-	def display_scoreboard #future improvement: add name feature, add the ability to save and load scoreboards, probably change this entirely to deal with a large number of player names
-		loop do #keeps asking until it gets a valid input
-			puts '\nIf you would like to view the entire scoreboard, say "all"'
-			puts 'If you would like to compare only two players, say "compare"'
-			response = gets.chomp.downcase
-			if response == "all"
-				puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
-				puts "Player 2 has #{$pvp_scoreboard[1]} point(s)."
-				break
-			elsif response == "human vs AI"
-				puts "\nHuman has #{$AI_scoreboard[0]} point(s)."
-				puts "Chessbot has #{$AI_scoreboard[1]} point(s)."
-				break
-			elsif response == "both"
-				puts "\nPlayer 1 has #{$pvp_scoreboard[0]} point(s)."
-				puts "Player 2 has #{$pvp_scoreboard[1]} point(s).\n"
-				puts "Human has #{$AI_scoreboard[0]} point(s)."
-				puts "Chessbot has #{$AI_scoreboard[1]} point(s)."
-				break
-			else
-				puts "\nSorry, I didn't understand that."
-			end
 		end
 	end
 	def player_name_prompt
