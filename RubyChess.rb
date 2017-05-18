@@ -1,5 +1,10 @@
 # the word "bug" in comments will be used to flag unfixed bugs
-$home_dir = ARGV.pop || "/home/alex/Desktop/Ruby/Chess"
+unless ARGV.empty?
+	dir_arg = ARGV.pop
+	replacements = {"\\" => "/"}
+	dir_arg = dir_arg.gsub(Regexp.union(replacements.keys), replacements)
+end
+$home_dir = dir_arg || "/home/alex/Desktop/Ruby/Chess"
 Dir.chdir($home_dir)
 require_relative('./Ordinals')
 require 'yaml'
