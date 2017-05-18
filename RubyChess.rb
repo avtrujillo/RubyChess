@@ -5,29 +5,37 @@ require 'yaml'
 
 module ChessDir
 	public
+	def parent_dir_of(dir_arg)
+		arg_path_array = dir_arg.split("/").drop(1)
+		parent_path_array = arg_path_array.take(arg_path_array.count - 1)
+		parent_path = parent_path_array.join("/")
+		parent_path = "/" + parent_path unless parent_path[0] == "/"
+		parent_path
+	end
 	def chdir_or_mkdir(dir_arg, start_from = "/home/alex/Desktop/Ruby/Chess")
 		dir_arg = dir_arg[1..-1] if dir_arg [0] == "/"
-		Dir.chdir(start_from)
-		existing_dir = Dir.entries(Dir.pwd).find do |f|
-			File.directory?(f) &&
-			File.absolute_path(f) == "/home/alex/Desktop/Ruby/Chess/" + dir_arg
+		Dir.chdir(parent_dir_of(start_from + "/" + dir_arg))
+		arg_basename = dir_arg.split("/").last
+		begin
+			Dir.chdir("./#{arg_basename}")
+		rescue
+			Dir.mkdir(arg_basename)
 		end
-		Dir.mkdir(dir_arg) unless existing_dir
-		Dir.chdir("./#{dir_arg}")
 	end
 	def chdir_or_mkdir_all(start_from = "/home/alex/Desktop/Ruby/Chess")
 		save_dirs = ["/SaveData", "/SaveData/Games", "/SaveData/Games/Unsaved",
-		"/SaveData/Games/Unfinished", "/SaveData/Games/Finished"]
+		"/SaveData/Games/Unfinished", "/SaveData/Games/Finished", "/SaveData/Players"]
 		save_dirs.each {|save_dir| self.chdir_or_mkdir(save_dir, start_from)}
 	end
-	def move_to_save_directory
-		Dir.chdir("/home/alex/Desktop/Ruby/Chess")
-		save_dir = Dir.entries("/home/alex/Desktop/Ruby/Chess").find {|f|
-			File.directory?(f) &&
-			File.absolute_path(f) == "/home/alex/Desktop/Ruby/Chess/SavedGames"
-		}
-		Dir.mkdir("SavedGames") unless save_dir
-		Dir.chdir("/home/alex/Desktop/Ruby/Chess/SavedGames")
+	def move_to_save_directory(save_dir, start_from = "/home/alex/Desktop/Ruby/Chess")
+		path_array = save_dir.split("/")
+		if (path_array.last == "Players") || path_array.last == "Games"
+			Dir.chdir(start_from + "/SaveData/" + path_array.last)
+		elsif ["Unfinished", "Unsaved", "Finished"].include?(path_array.last)
+			Dir.chdir(start_from + "/SaveData/Games/" + path_array.last)
+		else
+			raise "invalid save destination"
+		end
 	end
 end
 
@@ -80,12 +88,12 @@ class Scoreboard
 		@player2 = player2
 		@players = [player1, player2]
 		@games = player1.games.select {|game| game.player_names.include?(player2.name)}
-		@player_1_wins = games.select {|game| game.winner = player1}
+		@player_1_wins = games.select {|game| game.winner == player1}
 		@player_1_wins_white = @player_1_wins.select {|game| game.winner.color == "white"}
 		@player_1_wins_black = @player_1_wins.select {|game| game.winner.color == "black"}
-		@player_2_wins = games.select {|game| game.winner = player2}
-	 	@draws = games.select {|game| game.winner = "draw"}
-		@unfinished = games.select {|game| game.winner = "dnf" || game.winner.nil?}
+		@player_2_wins = games.select {|game| game.winner == player2}
+	 	@draws = games.select {|game| game.winner == "draw"}
+		@unfinished = games.select {|game| game.winner == "dnf" || game.winner.nil?}
 	end
 	def display
 		puts "\n#{@player1.name} vs #{@player2.name}"
@@ -185,8 +193,8 @@ class Game
 	extend UserPrompt
 	extend ChessDir
 	attr_accessor :simlevels, :white_team, :black_team, :history, :pieces,
-	:board, :tiles, :boardstate, :ended,  :white_player, :black_player
-	attr_reader :name, :started
+	:board, :tiles, :boardstate, :ended,  :white_player, :black_player, :saved
+	attr_reader :name, :started, :winner
 	def initialize(white_player, black_player)
 		@started = Time.now
 		@white_player = white_player
@@ -203,10 +211,12 @@ class Game
 		@simlevels.push(Simlevel.new(self, [[]], 0))
 		@simlevels.push(Simlevel.new(self, [[]], -1))
 		@player_names = [@black_player.name, @white_player.name].sort
+		@players = [white_player, black_player]
 		@name = "#{@player_names[0]} vs #{@player_names[1]} #{started}"
 		@players.each do |player|
 			player.games << self #reminder: update when saving or finishing
 		end
+		@saved = false
 		#to be used when saving and loading games
 		@history = []
 		@winner = nil #reminder: use this
@@ -228,6 +238,7 @@ class Game
 	end
 	def play
 		self.boardstate.generate_valid_moves
+		self.saved = false
 		$playing = true #reminder: make sure this updates when ending or saving a game
 		until $playing == false
 			TurnMenu.new(self)
@@ -235,61 +246,75 @@ class Game
 	end
 	def exit_game
 		return false unless Game.yesno_prompt("Are you sure you want to quit")
-		self.save if Game.yesno_prompt("Would you like to save your game?")
+		if Game.yesno_prompt("Would you like to save your game?")
+			self.save
+		end
 		$playing = false
 		true
 	end
-	def save
-		self.class.move_to_save_directory
+	def save_directory
+		game_dir = "/SaveData/Games"
+		if self.ended
+			return game_dir + "/Finished"
+		elsif self.saved
+			return game_dir + "/Unfinished"
+		else
+			return game_dir + "/Unsaved"
+		end
+	end
+	def save(saved = true)
+		self.saved = saved
+		Game.move_to_save_directory(self.save_directory)
 		game_save = File.open("#{self.name}.yaml", "w")
 		game_save.puts(YAML.dump(self))
 		game_save.close
 	end
-	def self.load
-		self.move_to_save_directory
-		players = load_prompt
+	def self.load(save_dir = "/SaveData/Games/Unfinished", start_from = "/home/alex/Desktop/Ruby/Chess")
+		Game.move_to_save_directory(save_dir)
+		players = Game.load_prompt
 		return nil unless players
 		game_name = self.select_save(players[0], players[1])
 		return nil unless game_name
-		puts game_name
-		game_file = File.open(game_name, "r")
+		Game.load_from_path(save_dir + "/" + game_name, start_from)
+	end
+	def self.load_from_path(file_path, start_from = "/home/alex/Desktop/Ruby/Chess")
+		game_file = File.open(start_from + file_path, "r")
 		loaded_game = YAML.load(game_file.read)
 		game_file.close
+		loaded_game.saved = false
 		loaded_game
 	end
 	PLAYERNAME_PROMPT_LAM = lambda do |response|
-		loop do
-			return "back" if response == "back"
-			Dir.chdir("..")
-			player = Player.search_roster(response)
-			Dir.chdir("./SavedGames")
-			if player
-				return player
-			else
-				puts "Sorry, I couldn't find that player"
-				return true
-			end
+		return {valid: true, return: "back"} if response == "back"
+		prev_dir = Dir.pwd
+		self.move_to_save_directory("/Players")
+		player = Player.search_roster(response)
+		Dir.chdir(prev_dir)
+		if player
+			return {return: player}
+		else
+			return {error: "Sorry, I couldn't find that player"}
 		end
 	end
 	def self.load_prompt
 		players = []
-		loop do
+		until players.count == 2
 			prompt_message = "What is the name of Player #{players.count + 1}?\n"
 			prompt_message += "You can also say \"back\" to cancel"
-			player = self.open_ended_prompt(prompt_message, PLAYERNAME_PROMPT_LAM)
+			player = self.prompt_until_valid(prompt_message, PLAYERNAME_PROMPT_LAM, nil)
 			return nil if player == "back"
 			players << player if player.is_a?(Player)
-			return players if players.count == 2
 		end
+		players
 	end
 	def self.select_save(player1, player2)
 		saved_games = self.list_saves(player1, player2)
 		(puts "\nNo matching games"; return nil) unless saved_games && !saved_games.empty?
 		prompt_message = "What is the number of the game you want to load?\n"
 		prompt_message += "You can also enter 0 to go back"
-		game_index = self.prompt_until_valid(prompt_message, SELECT_SAVE_LAM, nil,
-		(0..saved_games.count))
-		if game_index.zero?
+		game_index = (self.prompt_until_valid(prompt_message, SELECT_SAVE_LAM, nil,
+		(0..saved_games.count).to_a) - 1)
+		if game_index.negative?
 			return nil
 		else
 			return saved_games[game_index]
@@ -313,16 +338,16 @@ class Game
 	end
 	SELECT_SAVE_LAM = lambda do |response, valid_ints|
 		resp_int = response.to_i
-		if resp_int.to_s == response && valid_ints.include?(response)
-			return {valid?: true, return: response}
+		if resp_int.to_s == response && valid_ints.include?(resp_int)
+			return {valid?: true, return: resp_int}
 		elsif resp_int.to_s == response
 			return {valid?: false, error: "Out of range"}
 		else
 			return {valid?: false, error: "Please respond with an integer"}
 		end
 	end
-	def self.find_all_saves
-		self.move_to_save_directory
+	def self.find_all_saves(save_dir = "/SaveData/Games/Unfinished")
+		Game.move_to_save_directory(save_dir)
 		save_file_names = Dir.entries(Dir.pwd)
 		save_file_names.select {|entry|!File.directory?(entry)}
 		saved_games = save_file_names.map do |name|
@@ -1191,7 +1216,8 @@ class Team
 	end
 end
 
-class Player #will probably be used in save states later
+class Player
+	extend ChessDir
 	attr_accessor :color, :name, :games
 	@@roster = []
 	def initialize(color, name)
@@ -1207,15 +1233,14 @@ class Player #will probably be used in save states later
 		saved_games = Game.find_all_saves
 		saved_games.select! {|game|
 			raise "#{game.name}" unless game.player_names
-			player_names = game.player_names.map {|player| player.name}
-			player_names.include?(self.name)
+			game.player_names.include?(self.name)
 		}
 		to_be_added = saved_games.select {|game|
 			!self_game_names.include?(game.name)
 		}
 		@games += to_be_added
 	end
-	def opposite_player(game)
+	def opposite_player_name(game)
 		game.player_names.find {|name| name != self.name}
 	end
 	def self.search_roster(name)
@@ -1253,11 +1278,13 @@ class Player #will probably be used in save states later
 		self.save_players
 	end
 	def self.save_players
+		Player.move_to_save_directory("/SaveData/Players")
 		players_file =  File.open("players.yaml", "w")
 		players_file.puts YAML.dump(@@roster)
 		players_file.close
 	end
 	def self.load_players
+		Player.move_to_save_directory("/SaveData/Players")
 		if File::exists?("players.yaml")
 			players_file = File.open("players.yaml", "r")
 			players_text = players_file.read
@@ -1500,6 +1527,7 @@ class TurnMenu
 		self.ai_or_human
 	end
 	def ai_or_human
+		self.game.save(false)
 		moving_player_name = self.boardstate.moving_team.player.name
 		if moving_player_name.upcase == "AI"
 			self.ai_move
@@ -1640,13 +1668,34 @@ class MainMenu
 			self.first_negquery = false
 		end
 	end
-	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
-		loop do #future improvement: options to save and load games/scoreboards
-			puts %Q(\nWhat would you like to do? You can say "new game", "load game")
-			puts %Q("view scoreboard", "change display colors", or "close"\n ) #reminder: add the ability to load games
-			response = gets.chomp.downcase
-			break if self.main_menu_execute(response) == "close_chess"
+	MAIN_MENU_LAM = lambda do |response, valid|
+		if valid.include?(response) || response == "close"
+			return {return: response}
+		else
+			return nil
 		end
+	end
+	def unsaved_game_prompt(start_from = "/home/alex/Desktop/Ruby/Chess")
+		unsaved_games = Dir.entries(start_from + "/SaveData/Games/Unsaved")
+		unsaved_games.select! {|entry| entry[-5..-1] == ".yaml"}
+		message1 = "I see that you had an unsaved game when the program last closed."
+		message1 += "\nWould you like to resume it?"
+		message2 = "Would you like to save it then?"
+		if !unsaved_games.empty? && MainMenu.yesno_prompt(message1)
+			Game.load_from_path("/SaveData/Games/Unsaved/" + unsaved_games.first, start_from).play
+		elsif !unsaved_games.empty? && MainMenu.yesno_prompt(message2)
+			Game.load_from_path("/SaveData/Games/Unsaved/" + unsaved_games.first, start_from).save
+		end
+	end
+	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
+		unsaved_game_prompt
+		valid = ["new game", "load game", "view scoreboard",
+			"change display colors", "close"]
+		message = "\nWhat would you like to do? You can say\n"
+		message += "#{valid.join(", ")} or \"close\""
+		response = self.class.prompt_until_valid(message, MAIN_MENU_LAM, nil, valid)
+		return nil if self.main_menu_execute(response) == "close_chess"
+		main_menu_execute(response)
 	end
 	def main_menu_execute(response)
 		case response
@@ -1656,14 +1705,9 @@ class MainMenu
 			Scoreboard.display_menu
 		when "change display colors"
 			self.negquery
-		when "close"
-			self.close_chess #reminder: how should this work?
-			return "close_chess"
 		when "load game"
 			loaded_game = Game.load
 			loaded_game.play if loaded_game
-		else
-			puts "Sorry, I didn't understand that."
 		end
 	end
 	def player_name_prompt
