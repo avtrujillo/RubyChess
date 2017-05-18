@@ -1,8 +1,11 @@
 # the word "bug" in comments will be used to flag unfixed bugs
-unless ARGV.empty?
-	dir_arg = ARGV.pop
+def forward_slashes_only(pathstring)
 	replacements = {"\\" => "/"}
-	dir_arg = dir_arg.gsub(Regexp.union(replacements.keys), replacements)
+	pathstring = pathstring.gsub(Regexp.union(replacements.keys), replacements)
+end
+dir_arg = ARGV.pop
+unless ARGV.empty?
+	dir_arg = forward_slashes_only(dir_arg)
 end
 $home_dir = dir_arg || "/home/alex/Desktop/Ruby/Chess"
 Dir.chdir($home_dir)
@@ -218,13 +221,18 @@ class Game
 		@simlevels.push(Simlevel.new(self, [[]], -1))
 		@player_names = [@black_player.name, @white_player.name].sort
 		@players = [white_player, black_player]
-		@name = "#{@player_names[0]} vs #{@player_names[1]} #{started}"
+		@name = "#{@player_names[0]}_vs_#{@player_names[1]}_#{started}"
+		@name = valid_windows_filename(@name)
 		@players.each do |player|
 			player.games << self #reminder: update when saving or finishing
 		end
 		@saved = false
 		@history = []
 		@winner = nil
+	end
+	def valid_windows_filename(str)
+		replacements = {" " => "_", ":" => "-"}
+		str = str.gsub(Regexp.union(replacements.keys), replacements)
 	end
 	def display_move_history
 		@history.each {|move| puts move.summary}
@@ -283,6 +291,7 @@ class Game
 		File.delete(@last_save_path) if @last_save_path
 		Game.move_to_save_directory(self.save_directory)
 		@last_save_path = "#{Dir.pwd}/#{self.name}.yaml"
+		puts Dir.pwd
 		game_save = File.open("#{self.name}.yaml", "w")
 		game_save.puts(YAML.dump(self))
 		game_save.close
@@ -367,7 +376,7 @@ class Game
 	def self.find_all_saves(save_dir = "/SaveData/Games/Unfinished")
 		Game.move_to_save_directory(save_dir)
 		save_file_names = Dir.entries(Dir.pwd)
-		save_file_names.select {|entry|!File.directory?(entry)}
+		save_file_names.select! {|entry| entry.length > 5 && entry[-5..-1] = ".yaml"}
 		saved_games = save_file_names.map do |name|
 			save_file = File.open(name, "r")
 			game = nil
@@ -1702,13 +1711,15 @@ class MainMenu
 	end
 	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
 		unsaved_game_prompt
-		valid = ["new game", "load game", "view scoreboard",
-			"change display colors", "close"]
-		message = "\nWhat would you like to do? You can say\n"
-		message += "#{valid.join(", ")} or \"close\""
-		response = self.class.prompt_until_valid(message, MAIN_MENU_LAM, nil, valid)
-		return nil if self.main_menu_execute(response) == "close_chess"
-		main_menu_execute(response)
+		loop do
+			valid = ["new game", "load game", "view scoreboard",
+				"change display colors", "close"]
+			message = "\nWhat would you like to do? You can say\n"
+			message += "#{valid.join(", ")} or \"close\""
+			response = self.class.prompt_until_valid(message, MAIN_MENU_LAM, nil, valid)
+			break if response == "close"
+			main_menu_execute(response)
+		end
 	end
 	def main_menu_execute(response)
 		case response
