@@ -1,30 +1,13 @@
 # the word "bug" in comments will be used to flag unfixed bugs
-def forward_slashes_only(pathstring)
-	replacements = {"\\" => "/"}
-	pathstring = pathstring.gsub(Regexp.union(replacements.keys), replacements)
-end
-dir_arg = ARGV.pop
-unless ARGV.empty?
-	dir_arg = forward_slashes_only(dir_arg)
-end
-$home_dir = dir_arg || "/home/alex/Desktop/Ruby/Chess"
-Dir.chdir($home_dir)
+
 require_relative('./Ordinals')
 require 'yaml'
 
 module ChessDir
 	public
-	def parent_dir_of(dir_arg)
-		arg_path_array = dir_arg.split("/").drop(1)
-		parent_path_array = arg_path_array.take(arg_path_array.count - 1)
-		parent_path = parent_path_array.join("/")
-		parent_path = "/" + parent_path unless parent_path[0] == "/"
-		parent_path
-	end
 	def chdir_or_mkdir(dir_arg)
-		main_dir = (File.expand_path(__FILE__) - "RubyChess.rb")
 		dir_arg = dir_arg[1..-1] if dir_arg [0] == "/"
-		Dir.chdir(parent_dir_of(main_dir + dir_arg))
+		Dir.chdir(File.dirname(__dir__ + "/" + dir_arg))
 		arg_basename = dir_arg.split("/").last
 		begin
 			Dir.chdir("./#{arg_basename}")
@@ -38,12 +21,11 @@ module ChessDir
 		save_dirs.each {|save_dir| self.chdir_or_mkdir(save_dir)}
 	end
 	def move_to_save_directory(save_dir)
-		start_from = (File.expand_path(__FILE__) - "RubyChess.rb")
 		path_array = save_dir.split("/")
 		if (path_array.last == "Players") || path_array.last == "Games"
-			Dir.chdir(start_from + "/SaveData/" + path_array.last)
+			Dir.chdir(__dir__ + "/SaveData/" + path_array.last)
 		elsif ["Unfinished", "Unsaved", "Finished"].include?(path_array.last)
-			Dir.chdir(start_from + "/SaveData/Games/" + path_array.last)
+			Dir.chdir(__dir__ + "/SaveData/Games/" + path_array.last)
 		else
 			raise "invalid save destination"
 		end
@@ -226,7 +208,9 @@ class Game
 		@name = "#{@player_names[0]}_vs_#{@player_names[1]}_#{started}"
 		@name = valid_windows_filename(@name)
 		@players.each do |player|
-			player.games << self #reminder: update when saving or finishing
+			unless player.games.include?{|game| game.name == @name}
+				player.games << self #reminder: update when saving or finishing
+			end
 		end
 		@saved = false
 		@history = []
@@ -913,9 +897,9 @@ class Rook < Piece
 		move.snapshot = Snapshot.new(move.simlevel)
 		move.simlevel.generate_valid_moves
 		if (move.enemy_check == true) && (move.simevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
-			game_over("checkmate", move.team.player)
+			self.game.game_over("checkmate", move.team.player)
 		elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
-			game_over("stalemate", "draw")
+			self.game.game_over("stalemate", "draw")
 		end
 		# move.game.boardstate.display
 		if (move.enemy_check == true)
@@ -1459,9 +1443,9 @@ class Move
 		self.simlevel.generate_valid_moves
 		valid_move = self.simlevel.movelist.find {|found_move| !found_move.ally_check}
 		if self.enemy_check && !valid_move # aka checkmate
-			game_over("checkmate", self.team.player)
+			self.game.game_over("checkmate", self.team.player)
 		elsif !valid_move # aka stalemate
-			game_over("stalemate", self.team.player)
+			self.game.game_over("stalemate", self.team.player)
 		end
 	end
 	def three_move_rule
@@ -1470,7 +1454,7 @@ class Move
 			puts "The board has already been in this state before. If this happens\nagain, the game will result in a draw."
 		elsif identical_moves.count == 3
 			puts "The board has been in this state three times. The game ends in a draw."
-			game_over("three moves", "draw")
+			self.game.game_over("three moves", "draw")
 		end
 	end
 	def fifty_move_rule
@@ -1478,7 +1462,7 @@ class Move
 		fmc = self.simlevel.fifty_move_counter
 		fmc += 1 unless self.taken || self.piece.is_a?(Pawn)
 		if fmc == 50
-			game_over("fifty moves", "draw")
+			self.game.game_over("fifty moves", "draw")
 		elsif fmc > 19 && (fmc % 10 == 0) || (50 - fmc < 10)
 			puts "It has been #{fmc.to_s} moves since a pawn has been"
 			puts "moved or a piece has been taken."
@@ -1586,7 +1570,7 @@ class TurnMenu
 			elsif response == "MOVE HISTORY"
 				@game.display_move_history
 			elsif response == "SURRENDER"
-				self.game_over("surrender", @game.moving_team.opposite.player)
+				self.game.game_over("surrender", @game.moving_team.opposite.player)
 				break
 			elsif response == "DRAW"
 				self.draw_prompt
@@ -1709,13 +1693,12 @@ class MainMenu
 			Game.load_from_path(unsaved_game).play
 		elsif unsaved_game && MainMenu.yesno_prompt(save_message)
 			Game.load_from_path(unsaved_game).save
-		else
+		elsif unsaved_game
 			File.delete(unsaved_game)
 		end
 	end
 	def get_unsaved_game
-		unsaved_dir = (File.expand_path(__FILE__) - "RubyChess.rb")
-		unsaved_dir += "/SaveData/Games/Unsaved"
+		unsaved_dir = __dir__ + "/SaveData/Games/Unsaved"
 		unsaved_dir_entries = Dir.entries(unsaved_dir)
 		unsaved_dir_entries.select! {|entry| entry[-5..-1] == ".yaml"}
 		raise "multiple unsaved games" if unsaved_dir_entries.count > 1
