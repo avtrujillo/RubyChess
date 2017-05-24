@@ -21,9 +21,10 @@ module ChessDir
 		parent_path = "/" + parent_path unless parent_path[0] == "/"
 		parent_path
 	end
-	def chdir_or_mkdir(dir_arg, start_from = $home_dir)
+	def chdir_or_mkdir(dir_arg)
+		main_dir = (File.expand_path(__FILE__) - "RubyChess.rb")
 		dir_arg = dir_arg[1..-1] if dir_arg [0] == "/"
-		Dir.chdir(parent_dir_of(start_from + "/" + dir_arg))
+		Dir.chdir(parent_dir_of(main_dir + dir_arg))
 		arg_basename = dir_arg.split("/").last
 		begin
 			Dir.chdir("./#{arg_basename}")
@@ -31,12 +32,13 @@ module ChessDir
 			Dir.mkdir(arg_basename)
 		end
 	end
-	def chdir_or_mkdir_all(start_from = $home_dir)
+	def chdir_or_mkdir_all
 		save_dirs = ["/SaveData", "/SaveData/Games", "/SaveData/Games/Unsaved",
 		"/SaveData/Games/Unfinished", "/SaveData/Games/Finished", "/SaveData/Players"]
-		save_dirs.each {|save_dir| self.chdir_or_mkdir(save_dir, start_from)}
+		save_dirs.each {|save_dir| self.chdir_or_mkdir(save_dir)}
 	end
-	def move_to_save_directory(save_dir, start_from = $home_dir)
+	def move_to_save_directory(save_dir)
+		start_from = (File.expand_path(__FILE__) - "RubyChess.rb")
 		path_array = save_dir.split("/")
 		if (path_array.last == "Players") || path_array.last == "Games"
 			Dir.chdir(start_from + "/SaveData/" + path_array.last)
@@ -296,16 +298,17 @@ class Game
 		game_save.puts(YAML.dump(self))
 		game_save.close
 	end
-	def self.load(save_dir = "/SaveData/Games/Unfinished", start_from = $home_dir)
+	def self.load
+		save_dir = (File.expand_path(__FILE__) - "RubyChess.rb")
 		Game.move_to_save_directory(save_dir)
 		players = Game.load_prompt
 		return nil unless players
 		game_name = self.select_save(players[0], players[1])
 		return nil unless game_name
-		Game.load_from_path(save_dir + "/" + game_name, start_from)
+		Game.load_from_path(save_dir + game_name)
 	end
-	def self.load_from_path(file_path, start_from = $home_dir)
-		game_file = File.open(start_from + file_path, "r")
+	def self.load_from_path(file_path)
+		game_file = File.open(file_path, "r")
 		loaded_game = YAML.load(game_file.read)
 		game_file.close
 		loaded_game.saved = false
@@ -1697,19 +1700,26 @@ class MainMenu
 			return nil
 		end
 	end
-	def unsaved_game_prompt(start_from = $home_dir)
-		unsaved_games = Dir.entries(start_from + "/SaveData/Games/Unsaved")
-		unsaved_games.select! {|entry| entry[-5..-1] == ".yaml"}
-		message1 = "I see that you had an unsaved game when the program last closed."
-		message1 += "\nWould you like to resume it?"
-		message2 = "Would you like to save it then?"
-		if !unsaved_games.empty? && MainMenu.yesno_prompt(message1)
-			Game.load_from_path("/SaveData/Games/Unsaved/" + unsaved_games.first, start_from).play
-		elsif !unsaved_games.empty? && MainMenu.yesno_prompt(message2)
-			Game.load_from_path("/SaveData/Games/Unsaved/" + unsaved_games.first, start_from).save
+	def unsaved_game_prompt
+		unsaved_game = get_unsaved_game
+		load_message = "I see that you had an unsaved game when the program last "
+		load_message += "closed.\nWould you like to resume it?"
+		save_message = "Would you like to save it then?"
+		if unsaved_game && MainMenu.yesno_prompt(load_message)
+			Game.load_from_path(unsaved_game).play
+		elsif unsaved_game && MainMenu.yesno_prompt(save_message)
+			Game.load_from_path(unsaved_game).save
 		else
-			File.delete(start_from + "/SaveData/Games/Unsaved/" + unsaved_games.first)
+			File.delete(unsaved_game)
 		end
+	end
+	def get_unsaved_game
+		unsaved_dir = (File.expand_path(__FILE__) - "RubyChess.rb")
+		unsaved_dir += "/SaveData/Games/Unsaved"
+		unsaved_dir_entries = Dir.entries(unsaved_dir)
+		unsaved_dir_entries.select! {|entry| entry[-5..-1] == ".yaml"}
+		raise "multiple unsaved games" if unsaved_dir_entries.count > 1
+		unsaved_dir_entries.first
 	end
 	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
 		unsaved_game_prompt
@@ -1718,7 +1728,7 @@ class MainMenu
 				"change display colors", "close"]
 			message = "\nWhat would you like to do? You can say\n"
 			message += "#{valid.join(", ")} or \"close\""
-			response = self.class.prompt_until_valid(message, MAIN_MENU_LAM, nil, valid)
+			response = MainMenu.prompt_until_valid(message, MAIN_MENU_LAM, nil, valid)
 			break if response == "close"
 			main_menu_execute(response)
 		end
