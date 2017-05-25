@@ -208,7 +208,7 @@ class Game
 		@name = "#{@player_names[0]}_vs_#{@player_names[1]}_#{started}"
 		@name = valid_windows_filename(@name)
 		@players.each do |player|
-			unless player.games.include?{|game| game.name == @name}
+			unless player.games.any?{|game| game.name == @name}
 				player.games << self #reminder: update when saving or finishing
 			end
 		end
@@ -261,6 +261,11 @@ class Game
 		@winner = winner
 		self.save
 		$playing = false
+		if winner == "draw"
+			puts "The game is a draw by #{game_over_cause}"
+		else
+			puts "#{winner.name} (#{winner.team.color}) wins by #{game_over_cause}"
+		end
 	end
 	def save_directory
 		game_dir = "/SaveData/Games"
@@ -277,7 +282,6 @@ class Game
 		File.delete(@last_save_path) if @last_save_path
 		Game.move_to_save_directory(self.save_directory)
 		@last_save_path = "#{Dir.pwd}/#{self.name}.yaml"
-		puts Dir.pwd
 		game_save = File.open("#{self.name}.yaml", "w")
 		game_save.puts(YAML.dump(self))
 		game_save.close
@@ -510,7 +514,8 @@ class Boardstate #redundant, but makes things easier to read
 			self.pieces.each do |piece|
 				rows.push ("   #{piece.title}=#{piece.symbol}" )
 			end
-			rows.uniq!.sort!
+			rows.uniq!
+			rows.sort!
 		end
 		rows
 	end
@@ -532,58 +537,55 @@ class Boardstate #redundant, but makes things easier to read
 		puts rowmeat + legend.slice!(1).to_s
 		puts rowbread + legend.slice!(1).to_s
 	end
+	DEST_EMPTY_OR_ENEMY = Proc.new do |move|
+		next true if move.destination == "castle"
+		next false unless move.simlevel.tiles.include?(move.destination)
+		next true unless move.destination.occupied_piece
+		next false if move.destination.occupied_piece.team == move.piece.team
+		next false if move.destination == move.departure
+		true
+	end
 	def generate_valid_moves #returns a list of every possible valid move for a given turn from an array of tiles
 		self.movelist = [] #this is a list of all valid moves for the given state of the board, will be returned at the end
 		mover_pieces = self.active_pieces.select {|piece|
 			piece.team == self.moving_team
 		}
-		mover_pieces.each do |piece|
-			nonself_moves_before = self.movelist.select {|move| move.piece != piece}
-			# we need to have a record so that we know if a piece's criteria is
-			# messing with moves that don't belong to that piece
-			destinations = piece.criteria
-			destinations.each do |destination|
-				if destination.occupied_piece && destination.occupied_piece.team == piece.team
-					next
-				else
-					move = Move.new(self.game, piece.tile, destination)
-					self.movelist.push(move)
-				end
-			end
-			nonself_moves_after = self.movelist.select {|move| move.piece != piece}
-			unless nonself_moves_before == nonself_moves_after
-				puts "piece.tile = #{piece.tile.name}, #{piece.depth.to_s} piece.name = #{piece.name} #{piece.simlevel.object_id}"
-				puts "added:"
-				(nonself_moves_after - nonself_moves_before).each do |move|
-					puts "#{move.piece.name} #{move.piece.depth.to_s} #{move.departure.name} #{move.destination.name}  #{move.simlevel.object_id}"
-				end
-				puts "removed:"
-				(nonself_moves_before- nonself_moves_after).each do |move|
-					puts "#{move.piece.name} #{move.departure.name} #{move.destination.name}, #{move.simlevel.object_id}"
-				end
-				raise "#{piece.name} is adding or deleting other pieces' moves"
-				# each piece's criteria should be deleting any invalid moves that move
-				# that piece, and, in the case of a rook, adding an option to castle if
-				# applicable. If moves that move other pieces get added or removed,
-				# something isn't working correctly.
-			end
-		end
-		self.movelist.each do |move|
-			if move.destination == "castle"
-				#this is only here to avoid calling "castle".destination and getting an error
-			#	puts "#{move.piece.name} castle" #delete later
-			elsif ((move.destination.occupied_piece != nil) && (move.destination.occupied_piece.team == move.piece.team)) ||
-					self.tiles.include?(move.destination) == false ||
-					move.destination == move.departure
-				self.movelist.delete(move)
-			else
-			#	puts "#{move.piece.name} #{move.departure.coordinates.name} to #{move.destination.coordinates.name}" #delete later
-			end
-		end
-		# for debugging: going to try only changing boardstate.movelist instead of
-		# => also returning it
-		#return boardstate.movelist #note: we do not determine at this stage whether these moves will put the friendly king in check, because that would be absolute hell in terms of both memory efficieny and our ability to read the code.
+		mover_pieces.each {|piece| piece_valid_moves(piece)}
+		self.movelist.select!(&DEST_EMPTY_OR_ENEMY)
+		raise unless movelist.is_a?(Array)
 		self.movelist
+		#note: we do not determine at this stage whether these moves will put the friendly king in check, because that would be absolute hell in terms of both memory efficieny and our ability to read the code.
+	end
+	def piece_valid_moves(piece)
+		nonself_moves_before = self.movelist.select {|move| move.piece != piece}
+		destinations = piece.criteria
+		destinations.each do |destination|
+			unless destination.occupied_piece && destination.occupied_piece.team == piece.team
+				move = Move.new(self.game, piece.tile, destination)
+				raise if move.taken && move.taken.team == move.piece.team
+				self.movelist.push(move)
+			end
+		end
+		nonself_moves_after = self.movelist.select {|move| move.piece != piece}
+		nonself_moves_edit_err_message(nonself_moves_before, nonself_moves_after)
+	end
+	def nonself_moves_edit_err_message(nonself_moves_before, nonself_moves_after)
+		unless nonself_moves_before == nonself_moves_after
+			puts "piece.tile = #{piece.tile.name}, #{piece.depth.to_s} piece.name = #{piece.name} #{piece.simlevel.object_id}"
+			puts "added:"
+			(nonself_moves_after - nonself_moves_before).each do |move|
+				puts "#{move.piece.name} #{move.piece.depth.to_s} #{move.departure.name} #{move.destination.name}  #{move.simlevel.object_id}"
+			end
+			puts "removed:"
+			(nonself_moves_before- nonself_moves_after).each do |move|
+				puts "#{move.piece.name} #{move.departure.name} #{move.destination.name}, #{move.simlevel.object_id}"
+			end
+			raise "#{piece.name} is adding or deleting other pieces' moves"
+			# each piece's criteria should be deleting any invalid moves that move
+			# that piece, and, in the case of a rook, adding an option to castle if
+			# applicable. If moves that move other pieces get added or removed,
+			# something isn't working correctly.
+		end
 	end
 end
 
@@ -594,14 +596,15 @@ class Simlevel < Boardstate #used for check_detect and checkmate_detect
 		@depth = (superdepth - 1) #how many levels of simulation deep are we?
 		@board = []
 		@pieces = []
+		@game.simlevels[(depth * (-1))] = self
+		$obj_id = self.object_id
 		superboard.each do |superrow|
 			row = []
 			superrow.each do |supertile|
 				simtile = supertile.simulate
+				simtile.occupied_piece.name if simtile.occupied_piece
+				supertile.occupied_piece.name if supertile.occupied_piece
 				row.push(simtile)
-				unless simtile.occupied_piece == nil
-					@pieces.push(simtile.occupied_piece)
-				end
 			end
 			@board.push(row)
 		end
@@ -743,13 +746,14 @@ class CastlePath # note: not a subclass of Path
 	end
 	def safe?
 		self.king_tiles.any? {|tile|
-			Move.new(self.rook.game, king.tile, tile).ally_check == true
+			Move.new(self.rook.game, king.tile, tile).ally_check
 		}
 	end
 end
 
 class Piece
-	attr_accessor :coordinates, :serial, :depth, :game, :moved, :color
+	extend UserPrompt
+	attr_accessor :promoted_from, :coordinates, :serial, :depth, :game, :moved, :color
 	class << self; attr_accessor :black_symbol, :white_symbol end
 	@white_symbol = "?"
 	@black_symbol = "?"
@@ -758,13 +762,14 @@ class Piece
 		@color = color
 		@game = game
 		@coordinates = $coordinates.find {|coor| coor.name == tilename.upcase}
-		self.clear_tile if @game && @game.simlevels && self.tile
+		self.clear_tile if @game && @game.simlevels
 		@serial = serial
 		@moved = false
+		self.simlevel.pieces.push(self)
 	end
 	def clear_tile
 		current_occupants = self.simlevel.pieces.select {|piece|
-			piece.coordinates == self.coordinates
+			piece.coordinates == self.coordinates && !(piece.equal?(self))
 		}
 		current_occupants.each do |piece|
 			piece.coordinates = nil
@@ -793,7 +798,7 @@ class Piece
 		end
 	end
 	def simlevel
-		return self.game.simlevels[self.depth.abs]
+		self.game.simlevels[self.depth.abs]
 	end
 	def team
 		if color == "black"
@@ -810,7 +815,7 @@ class Piece
 	def simulate
 		piece_sim = self.class.new(self.color, self.tile.coordinates.name, self.serial, self.game, self.depth - 1)
 		piece_sim.moved = self.moved
-		piece_sim.simlevel.pieces.push(piece_sim)
+		piece_sim.promoted_from = self.promoted_from
 		piece_sim
 	end
 	def plus_path #all the possible moves of a rook
@@ -871,8 +876,7 @@ class Rook < Piece
 		self.castle_dest = @castle_tiles.last
 		clear = self.castle_path.clear?
 		safe = self.castle_path.safe?
-		last_move = game.history.last
-		last_move_check = !(!last_move || !!last_move.enemy_check)
+		last_move_check = game.history.last ? game.history.last.enemy_check : false
 		(safe && !last_move_check)
 	end
 	def criteria
@@ -896,14 +900,12 @@ class Rook < Piece
 		move.simlevel.moving_team = move.team.opposite
 		move.snapshot = Snapshot.new(move.simlevel)
 		move.simlevel.generate_valid_moves
-		if (move.enemy_check == true) && (move.simevel.movelist.find {|found_move| found_move.ally_check == false} == nil) #aka checkmate
-			self.game.game_over("checkmate", move.team.player)
-		elsif (move.enemy_check == false) && (move.simlevel.movelist.find {|found_move| found_move.ally_check == false} == nil)
-			self.game.game_over("stalemate", "draw")
-		end
-		# move.game.boardstate.display
-		if (move.enemy_check == true)
-			puts "#{move.enemy.capitalize}'s king is in check!"
+		if !move.simlevel.movelist.find {|found_move| !found_move.ally_check}
+			mate_type = move.enemy_check ? "checkmate" : "stalemate"
+			self.game.game_over(mate_type, "draw")
+		elsif move.enemy_check
+			puts "#{move.team.color}'s king is in check from:"
+			move.enemy_check.each {|m| puts m.summary}
 		end
 	end
 end
@@ -1107,8 +1109,8 @@ class Pawn < Piece
 		end
 	end
 	def promotion_prompt(move)
-		promo_klass = prompt_until_valid("What should I promote your pawn to?",
-		PROMO_LAM, PROMO_KLASSES)
+		promo_klass = Pawn.prompt_until_valid("What should I promote your pawn to?",
+		PROMO_LAM, nil, PROMO_KLASSES)
 		self.promote(promo_klass, move)
 	end
 	def promote(promo_klass, move)
@@ -1116,10 +1118,11 @@ class Pawn < Piece
 			piece.is_a?(promo_klass) && piece.team == self.team
 		}
 		serial = klassmates.count + 1
-		replacement = promo_klass.new(self.team, self.move.departure.name,
+		replacement = promo_klass.new(self.team, self.tile.name,
 		serial, self.game, self.depth)
 		self.coordinates = nil
 		replacement.moved = true
+		replacement.promoted_from = self.name
 		replacement
 	end
 end
@@ -1134,6 +1137,7 @@ class Tile
 		@game = game
 	end
 	def boardstate
+		level = self.game.simlevels.find {|level| level.depth == self.depth}
 		self.game.simlevels.find {|level| level.depth == self.depth}
 	end
 	def occupied_piece
@@ -1167,7 +1171,7 @@ class Tile
 	end
 	def simulate
 		simtile = Tile.new((self.coordinates.x_axis), (self.coordinates.y_axis), (self.depth - 1), self.game)
-		self.occupied_piece.simulate if self.occupied_piece
+		piece_sim = self.occupied_piece.simulate if self.occupied_piece
 		simtile
 	end
 	def center_symbol
@@ -1322,12 +1326,13 @@ class Move
 	end
 	def summary
 		sumry = "\nMove ##{self.move_number}: #{team.player.name} moves their #{piece.title}"
-		sumry += "from #{departure.name} to #{destination.name}. Check = #{self.enemy_check}"
+		sumry += "from #{departure.name} to #{destination.name}. Check = #{!!self.enemy_check}"
 		sumry += "#{taken.name} taken" if taken
 		sumry
 	end
 	def move_number
-		self.game.history.find_index(self) + 1
+		found_move = game.history.find {|move| move.turn == self.turn}
+		self.game.history.find_index(found_move) + 1
 	end
 	def white_check
 		if self.team == self.game.white_team
@@ -1353,7 +1358,7 @@ class Move
 	def enemy_check
 		if self.piece.is_a?(Pawn) && self.enemy_check_cache.nil? &&
 			[1, 8].include?(self.destination.coordinates.y_axis)
-			return self.promotion_check_detect(outcome)
+			return self.promotion_check_detect
 		elsif self.enemy_check_cache.nil?
 			return self.enemy_check_detect
 		else
@@ -1364,33 +1369,36 @@ class Move
 		outcome = self.simulate_outcome
 		outcome.generate_valid_moves
 		possible_moves = outcome.movelist
-		if possible_moves.any? {|move| move.taken.is_a?(King)}
-			self.ally_check_cache = true
-		else
+		check_moves = possible_moves.select {|move| move.taken.is_a?(King)}
+		if check_moves.empty?
 			self.ally_check_cache = false
+		else
+			self.ally_check_cache = check_moves
 		end
 		self.ally_check_cache
 	end
 	def enemy_check_detect(outcome = self.simulate_outcome)
 		outcome.moving_team = outcome.moving_team.opposite #we proceed as though the moving team gets another free turn
 		possible_moves = outcome.generate_valid_moves
-		if possible_moves.any? {|move| move.taken.is_a?(King)}
-			return self.enemy_check_cache = true
-		else
+		check_moves = possible_moves.select {|move| move.taken.is_a?(King)}
+		if check_moves.empty?
 			return self.enemy_check_cache = false
+		else
+			return self.enemy_check_cache = check_moves
 		end
 	end
 	def promotion_check_detect
-		["queen", "knight"].each do |klass| # there are no situations where promoting to a rook or bishop would result in check but promoting to a queen wouldn't.
+		check_moves = [Queen, Knight].inject([]) do |ch_moves, klass| # there are no situations where promoting to a rook or bishop would result in check but promoting to a queen wouldn't.
 			promotion_outcome = self.simulate_outcome
-			to_be_promoted = promotion_outcome.pieces.find {|piece|
+			to_be_promoted = promotion_outcome.pieces.find do |piece|
 				piece.name == self.piece.name
-			}
-			to_be_promoted.promote(klass)
-			self.enemy_check_detect(promotion_outcome)
-			break if self.enemy_check_cache == true
+			end
+			to_be_promoted.promote(klass, self)
+			ecd = self.enemy_check_detect(promotion_outcome)
+			ch_moves.push(ecd) if ecd
+			ch_moves
 		end
-		self.enemy_check_cache
+		self.enemy_check_cache = (check_moves.empty? ? false : check_moves)
 	end
 	def simulate_outcome
 		simstate = (self.game.simlevels.find {|level| (level.depth == self.piece.depth)}).simulate
@@ -1414,10 +1422,17 @@ class Move
 	end
 	def simulate_move(simstate)
 		moved_piece = simstate.pieces.find {|piece| piece.name == self.piece.name}
+		if self.piece.is_a?(Pawn) && moved_piece.nil? &&
+			[1, 8].include?(destination.coordinates.y_axis)
+			moved_piece = simstate.pieces.find do |piece|
+				piece.promoted_from == (self.piece.promoted_from || self.piece.name)
+			end
+		end
 		moved_piece.move_to(self.destination.coordinates)
 		simstate.moving_team = simstate.moving_team.opposite
 	end
 	def execute
+		self.enemy_check
 		self.previous_turn = self.game.history.last
 		self.previous_turn.following_turn = self if self.previous_turn
 		puts "#{self.team.color.upcase} moves their #{self.piece.class.to_s} from #{self.departure.coordinates.name} to #{self.destination.coordinates.name}."
@@ -1426,6 +1441,7 @@ class Move
 		if (self.piece.is_a?(Pawn) && [1, 8].include?(self.destination.coordinates.y_axis))
 			self.piece.promotion_conditions(self)
 		end
+		puts self.destination.occupied_piece
 		self.game.history.push(self)
 		self.simlevel.turn_counter += 1
 		self.piece.moved = true
@@ -1436,7 +1452,8 @@ class Move
 		self.three_move_rule
 		self.fifty_move_rule
 		if self.enemy_check
-			puts "#{self.enemy.player.name.upcase}'s king is in check!"
+			puts "#{self.enemy.color}'s king is in check from:"
+			enemy_check.each {|m| puts m.summary}
 		end
 	end
 	def mate_detect
@@ -1547,7 +1564,7 @@ class TurnMenu
 		end
 	end
 	def ai_move
-		movelist = self.boardstate.movelist.select {|move| move.ally_check == false}
+		movelist = self.boardstate.movelist.select {|move| !move.ally_check}
 		movelist.sample.execute
 	end
 	def human_prompt_message
@@ -1625,7 +1642,7 @@ class TurnMenu
 		elsif move.nil? && (destination.occupied_piece && destination.occupied_piece.team == boardstate.moving_team)
 			puts "Sorry, that tile is already occupied by a friendly piece."
 			self.boardstate.display
-		elsif move.ally_check == true
+		elsif move.ally_check
 			self.boardstate.display
 			puts "Sorry, that move would put your king in check."
 		else
@@ -1702,7 +1719,7 @@ class MainMenu
 		unsaved_dir_entries = Dir.entries(unsaved_dir)
 		unsaved_dir_entries.select! {|entry| entry[-5..-1] == ".yaml"}
 		raise "multiple unsaved games" if unsaved_dir_entries.count > 1
-		unsaved_dir_entries.first
+		unsaved_dir + "/" + unsaved_dir_entries.first
 	end
 	def main_menu_prompt #asks the user for prompts when the program is first opened or after a game is completed
 		unsaved_game_prompt
