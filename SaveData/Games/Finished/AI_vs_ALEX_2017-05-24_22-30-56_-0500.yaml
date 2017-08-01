@@ -1,0 +1,3245 @@
+--- &1 !ruby/object:Game
+started: 2017-05-24 22:30:56.443957579 -05:00
+white_player: &3 !ruby/object:Player
+  color: white
+  name: ALEX
+  games:
+  - *1
+black_player: &2 !ruby/object:Player
+  color: black
+  name: AI
+  games:
+  - *1
+black_team: &109 !ruby/object:Team
+  color: black
+  player: *2
+  game: *1
+  check: false
+white_team: &107 !ruby/object:Team
+  color: white
+  player: *3
+  game: *1
+  check: false
+pieces: &106
+- &4 !ruby/object:Rook
+  depth: 0
+  color: white
+  game: *1
+  coordinates: &5 !ruby/object:Coordinates
+    letter: A
+    y_axis: 1
+    x_axis: 1
+    name: A1
+  serial: 1
+  moved: false
+  castle_path: !ruby/object:CastlePath
+    rook: *4
+    king: &12 !ruby/object:King
+      depth: 0
+      color: white
+      game: *1
+      coordinates: &6 !ruby/object:Coordinates
+        letter: E
+        y_axis: 1
+        x_axis: 5
+        name: E1
+      serial: 1
+      moved: false
+    tiles: &17
+    - &48 !ruby/object:Tile
+      coordinates: *5
+      depth: 0
+      game: *1
+    - &7 !ruby/object:Tile
+      coordinates: &9 !ruby/object:Coordinates
+        letter: B
+        y_axis: 1
+        x_axis: 2
+        name: B1
+      depth: 0
+      game: *1
+    - &49 !ruby/object:Tile
+      coordinates: &10 !ruby/object:Coordinates
+        letter: C
+        y_axis: 1
+        x_axis: 3
+        name: C1
+      depth: 0
+      game: *1
+    - &50 !ruby/object:Tile
+      coordinates: &11 !ruby/object:Coordinates
+        letter: D
+        y_axis: 1
+        x_axis: 4
+        name: D1
+      depth: 0
+      game: *1
+    - &51 !ruby/object:Tile
+      coordinates: *6
+      depth: 0
+      game: *1
+    - &19 !ruby/object:Tile
+      coordinates: &13 !ruby/object:Coordinates
+        letter: F
+        y_axis: 1
+        x_axis: 6
+        name: F1
+      depth: 0
+      game: *1
+    - &18 !ruby/object:Tile
+      coordinates: &14 !ruby/object:Coordinates
+        letter: G
+        y_axis: 1
+        x_axis: 7
+        name: G1
+      depth: 0
+      game: *1
+    - &52 !ruby/object:Tile
+      coordinates: &15 !ruby/object:Coordinates
+        letter: H
+        y_axis: 1
+        x_axis: 8
+        name: H1
+      depth: 0
+      game: *1
+    - &53 !ruby/object:Tile
+      coordinates: &127 !ruby/object:Coordinates
+        letter: A
+        y_axis: 2
+        x_axis: 1
+        name: A2
+      depth: 0
+      game: *1
+    - &54 !ruby/object:Tile
+      coordinates: &22 !ruby/object:Coordinates
+        letter: B
+        y_axis: 2
+        x_axis: 2
+        name: B2
+      depth: 0
+      game: *1
+    - &55 !ruby/object:Tile
+      coordinates: &128 !ruby/object:Coordinates
+        letter: C
+        y_axis: 2
+        x_axis: 3
+        name: C2
+      depth: 0
+      game: *1
+    - &56 !ruby/object:Tile
+      coordinates: &129 !ruby/object:Coordinates
+        letter: D
+        y_axis: 2
+        x_axis: 4
+        name: D2
+      depth: 0
+      game: *1
+    - &57 !ruby/object:Tile
+      coordinates: &130 !ruby/object:Coordinates
+        letter: E
+        y_axis: 2
+        x_axis: 5
+        name: E2
+      depth: 0
+      game: *1
+    - &58 !ruby/object:Tile
+      coordinates: &26 !ruby/object:Coordinates
+        letter: F
+        y_axis: 2
+        x_axis: 6
+        name: F2
+      depth: 0
+      game: *1
+    - &59 !ruby/object:Tile
+      coordinates: &27 !ruby/object:Coordinates
+        letter: G
+        y_axis: 2
+        x_axis: 7
+        name: G2
+      depth: 0
+      game: *1
+    - &60 !ruby/object:Tile
+      coordinates: &28 !ruby/object:Coordinates
+        letter: H
+        y_axis: 2
+        x_axis: 8
+        name: H2
+      depth: 0
+      game: *1
+    - &61 !ruby/object:Tile
+      coordinates: &131 !ruby/object:Coordinates
+        letter: A
+        y_axis: 3
+        x_axis: 1
+        name: A3
+      depth: 0
+      game: *1
+    - &62 !ruby/object:Tile
+      coordinates: &132 !ruby/object:Coordinates
+        letter: B
+        y_axis: 3
+        x_axis: 2
+        name: B3
+      depth: 0
+      game: *1
+    - &63 !ruby/object:Tile
+      coordinates: &23 !ruby/object:Coordinates
+        letter: C
+        y_axis: 3
+        x_axis: 3
+        name: C3
+      depth: 0
+      game: *1
+    - &64 !ruby/object:Tile
+      coordinates: &133 !ruby/object:Coordinates
+        letter: D
+        y_axis: 3
+        x_axis: 4
+        name: D3
+      depth: 0
+      game: *1
+    - &65 !ruby/object:Tile
+      coordinates: &134 !ruby/object:Coordinates
+        letter: E
+        y_axis: 3
+        x_axis: 5
+        name: E3
+      depth: 0
+      game: *1
+    - &66 !ruby/object:Tile
+      coordinates: &135 !ruby/object:Coordinates
+        letter: F
+        y_axis: 3
+        x_axis: 6
+        name: F3
+      depth: 0
+      game: *1
+    - &67 !ruby/object:Tile
+      coordinates: &136 !ruby/object:Coordinates
+        letter: G
+        y_axis: 3
+        x_axis: 7
+        name: G3
+      depth: 0
+      game: *1
+    - &68 !ruby/object:Tile
+      coordinates: &137 !ruby/object:Coordinates
+        letter: H
+        y_axis: 3
+        x_axis: 8
+        name: H3
+      depth: 0
+      game: *1
+    - &69 !ruby/object:Tile
+      coordinates: &138 !ruby/object:Coordinates
+        letter: A
+        y_axis: 4
+        x_axis: 1
+        name: A4
+      depth: 0
+      game: *1
+    - &70 !ruby/object:Tile
+      coordinates: &139 !ruby/object:Coordinates
+        letter: B
+        y_axis: 4
+        x_axis: 2
+        name: B4
+      depth: 0
+      game: *1
+    - &71 !ruby/object:Tile
+      coordinates: &140 !ruby/object:Coordinates
+        letter: C
+        y_axis: 4
+        x_axis: 3
+        name: C4
+      depth: 0
+      game: *1
+    - &72 !ruby/object:Tile
+      coordinates: &44 !ruby/object:Coordinates
+        letter: D
+        y_axis: 4
+        x_axis: 4
+        name: D4
+      depth: 0
+      game: *1
+    - &73 !ruby/object:Tile
+      coordinates: &141 !ruby/object:Coordinates
+        letter: E
+        y_axis: 4
+        x_axis: 5
+        name: E4
+      depth: 0
+      game: *1
+    - &74 !ruby/object:Tile
+      coordinates: &142 !ruby/object:Coordinates
+        letter: F
+        y_axis: 4
+        x_axis: 6
+        name: F4
+      depth: 0
+      game: *1
+    - &75 !ruby/object:Tile
+      coordinates: &143 !ruby/object:Coordinates
+        letter: G
+        y_axis: 4
+        x_axis: 7
+        name: G4
+      depth: 0
+      game: *1
+    - &76 !ruby/object:Tile
+      coordinates: &144 !ruby/object:Coordinates
+        letter: H
+        y_axis: 4
+        x_axis: 8
+        name: H4
+      depth: 0
+      game: *1
+    - &77 !ruby/object:Tile
+      coordinates: &145 !ruby/object:Coordinates
+        letter: A
+        y_axis: 5
+        x_axis: 1
+        name: A5
+      depth: 0
+      game: *1
+    - &78 !ruby/object:Tile
+      coordinates: &146 !ruby/object:Coordinates
+        letter: B
+        y_axis: 5
+        x_axis: 2
+        name: B5
+      depth: 0
+      game: *1
+    - &79 !ruby/object:Tile
+      coordinates: &24 !ruby/object:Coordinates
+        letter: C
+        y_axis: 5
+        x_axis: 3
+        name: C5
+      depth: 0
+      game: *1
+    - &80 !ruby/object:Tile
+      coordinates: &147 !ruby/object:Coordinates
+        letter: D
+        y_axis: 5
+        x_axis: 4
+        name: D5
+      depth: 0
+      game: *1
+    - &81 !ruby/object:Tile
+      coordinates: &148 !ruby/object:Coordinates
+        letter: E
+        y_axis: 5
+        x_axis: 5
+        name: E5
+      depth: 0
+      game: *1
+    - &82 !ruby/object:Tile
+      coordinates: &25 !ruby/object:Coordinates
+        letter: F
+        y_axis: 5
+        x_axis: 6
+        name: F5
+      depth: 0
+      game: *1
+    - &83 !ruby/object:Tile
+      coordinates: &149 !ruby/object:Coordinates
+        letter: G
+        y_axis: 5
+        x_axis: 7
+        name: G5
+      depth: 0
+      game: *1
+    - &84 !ruby/object:Tile
+      coordinates: &150 !ruby/object:Coordinates
+        letter: H
+        y_axis: 5
+        x_axis: 8
+        name: H5
+      depth: 0
+      game: *1
+    - &85 !ruby/object:Tile
+      coordinates: &151 !ruby/object:Coordinates
+        letter: A
+        y_axis: 6
+        x_axis: 1
+        name: A6
+      depth: 0
+      game: *1
+    - &86 !ruby/object:Tile
+      coordinates: &152 !ruby/object:Coordinates
+        letter: B
+        y_axis: 6
+        x_axis: 2
+        name: B6
+      depth: 0
+      game: *1
+    - &87 !ruby/object:Tile
+      coordinates: &153 !ruby/object:Coordinates
+        letter: C
+        y_axis: 6
+        x_axis: 3
+        name: C6
+      depth: 0
+      game: *1
+    - &88 !ruby/object:Tile
+      coordinates: &154 !ruby/object:Coordinates
+        letter: D
+        y_axis: 6
+        x_axis: 4
+        name: D6
+      depth: 0
+      game: *1
+    - &89 !ruby/object:Tile
+      coordinates: &155 !ruby/object:Coordinates
+        letter: E
+        y_axis: 6
+        x_axis: 5
+        name: E6
+      depth: 0
+      game: *1
+    - &90 !ruby/object:Tile
+      coordinates: &156 !ruby/object:Coordinates
+        letter: F
+        y_axis: 6
+        x_axis: 6
+        name: F6
+      depth: 0
+      game: *1
+    - &91 !ruby/object:Tile
+      coordinates: &157 !ruby/object:Coordinates
+        letter: G
+        y_axis: 6
+        x_axis: 7
+        name: G6
+      depth: 0
+      game: *1
+    - &92 !ruby/object:Tile
+      coordinates: &158 !ruby/object:Coordinates
+        letter: H
+        y_axis: 6
+        x_axis: 8
+        name: H6
+      depth: 0
+      game: *1
+    - &93 !ruby/object:Tile
+      coordinates: &43 !ruby/object:Coordinates
+        letter: A
+        y_axis: 7
+        x_axis: 1
+        name: A7
+      depth: 0
+      game: *1
+    - &94 !ruby/object:Tile
+      coordinates: &159 !ruby/object:Coordinates
+        letter: B
+        y_axis: 7
+        x_axis: 2
+        name: B7
+      depth: 0
+      game: *1
+    - &95 !ruby/object:Tile
+      coordinates: &21 !ruby/object:Coordinates
+        letter: C
+        y_axis: 7
+        x_axis: 3
+        name: C7
+      depth: 0
+      game: *1
+    - &96 !ruby/object:Tile
+      coordinates: &160 !ruby/object:Coordinates
+        letter: D
+        y_axis: 7
+        x_axis: 4
+        name: D7
+      depth: 0
+      game: *1
+    - &97 !ruby/object:Tile
+      coordinates: &45 !ruby/object:Coordinates
+        letter: E
+        y_axis: 7
+        x_axis: 5
+        name: E7
+      depth: 0
+      game: *1
+    - &98 !ruby/object:Tile
+      coordinates: &161 !ruby/object:Coordinates
+        letter: F
+        y_axis: 7
+        x_axis: 6
+        name: F7
+      depth: 0
+      game: *1
+    - &99 !ruby/object:Tile
+      coordinates: &46 !ruby/object:Coordinates
+        letter: G
+        y_axis: 7
+        x_axis: 7
+        name: G7
+      depth: 0
+      game: *1
+    - &100 !ruby/object:Tile
+      coordinates: &47 !ruby/object:Coordinates
+        letter: H
+        y_axis: 7
+        x_axis: 8
+        name: H7
+      depth: 0
+      game: *1
+    - &101 !ruby/object:Tile
+      coordinates: &29 !ruby/object:Coordinates
+        letter: A
+        y_axis: 8
+        x_axis: 1
+        name: A8
+      depth: 0
+      game: *1
+    - &31 !ruby/object:Tile
+      coordinates: &33 !ruby/object:Coordinates
+        letter: B
+        y_axis: 8
+        x_axis: 2
+        name: B8
+      depth: 0
+      game: *1
+    - &102 !ruby/object:Tile
+      coordinates: &34 !ruby/object:Coordinates
+        letter: C
+        y_axis: 8
+        x_axis: 3
+        name: C8
+      depth: 0
+      game: *1
+    - &103 !ruby/object:Tile
+      coordinates: &35 !ruby/object:Coordinates
+        letter: D
+        y_axis: 8
+        x_axis: 4
+        name: D8
+      depth: 0
+      game: *1
+    - &104 !ruby/object:Tile
+      coordinates: &162 !ruby/object:Coordinates
+        letter: E
+        y_axis: 8
+        x_axis: 5
+        name: E8
+      depth: 0
+      game: *1
+    - &41 !ruby/object:Tile
+      coordinates: &36 !ruby/object:Coordinates
+        letter: F
+        y_axis: 8
+        x_axis: 6
+        name: F8
+      depth: 0
+      game: *1
+    - &40 !ruby/object:Tile
+      coordinates: &37 !ruby/object:Coordinates
+        letter: G
+        y_axis: 8
+        x_axis: 7
+        name: G8
+      depth: 0
+      game: *1
+    - &105 !ruby/object:Tile
+      coordinates: &38 !ruby/object:Coordinates
+        letter: H
+        y_axis: 8
+        x_axis: 8
+        name: H8
+      depth: 0
+      game: *1
+    rook_tiles: &8
+    - *7
+    - *7
+    king_tiles: []
+    rook_dest: *7
+    king_dest: 
+  castle_tiles: *8
+  castle_dest: *7
+- &111 !ruby/object:Knight
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *9
+  serial: 1
+  moved: false
+- &112 !ruby/object:Bishop
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *10
+  serial: 1
+  moved: false
+- &113 !ruby/object:Queen
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *11
+  serial: 1
+  moved: false
+- *12
+- &115 !ruby/object:Bishop
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *13
+  serial: 2
+  moved: false
+- &116 !ruby/object:Knight
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *14
+  serial: 2
+  moved: false
+- &16 !ruby/object:Rook
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *15
+  serial: 2
+  moved: false
+  castle_path: !ruby/object:CastlePath
+    rook: *16
+    king: *12
+    tiles: *17
+    rook_tiles: &20
+    - *18
+    - *19
+    - *18
+    - *19
+    king_tiles: []
+    rook_dest: *19
+    king_dest: 
+  castle_tiles: *20
+  castle_dest: *19
+- &117 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *21
+  serial: 1
+  moved: true
+  orientation: 1
+- &120 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *22
+  serial: 2
+  moved: false
+  orientation: 1
+- &121 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *23
+  serial: 3
+  moved: true
+  orientation: 1
+- &122 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *24
+  serial: 4
+  moved: true
+  orientation: 1
+- &123 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *25
+  serial: 5
+  moved: true
+  orientation: 1
+- &124 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *26
+  serial: 6
+  moved: false
+  orientation: 1
+- &125 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *27
+  serial: 7
+  moved: false
+  orientation: 1
+- &126 !ruby/object:Pawn
+  depth: 0
+  color: white
+  game: *1
+  coordinates: *28
+  serial: 8
+  moved: false
+  orientation: 1
+- &30 !ruby/object:Rook
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *29
+  serial: 1
+  moved: false
+  castle_path: !ruby/object:CastlePath
+    rook: *30
+    king: *12
+    tiles: *17
+    rook_tiles: &32
+    - *31
+    - *31
+    king_tiles: []
+    rook_dest: *31
+    king_dest: 
+  castle_tiles: *32
+  castle_dest: *31
+- &119 !ruby/object:Knight
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *33
+  serial: 1
+  moved: false
+- !ruby/object:Bishop
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *34
+  serial: 1
+  moved: false
+- &263 !ruby/object:Queen
+  depth: 0
+  color: black
+  game: *1
+  coordinates: 
+  serial: 1
+  moved: true
+- &118 !ruby/object:King
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *35
+  serial: 1
+  moved: true
+- !ruby/object:Bishop
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *36
+  serial: 2
+  moved: false
+- !ruby/object:Knight
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *37
+  serial: 2
+  moved: false
+- &39 !ruby/object:Rook
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *38
+  serial: 2
+  moved: false
+  castle_path: !ruby/object:CastlePath
+    rook: *39
+    king: *12
+    tiles: *17
+    rook_tiles: &42
+    - *40
+    - *41
+    - *40
+    - *41
+    king_tiles: []
+    rook_dest: *41
+    king_dest: 
+  castle_tiles: *42
+  castle_dest: *41
+- &110 !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *43
+  serial: 1
+  moved: false
+  orientation: -1
+- &266 !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: 
+  serial: 2
+  moved: true
+  orientation: -1
+- &258 !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: 
+  serial: 3
+  moved: true
+  orientation: -1
+- &114 !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *44
+  serial: 4
+  moved: true
+  orientation: -1
+- !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *45
+  serial: 5
+  moved: false
+  orientation: -1
+- &255 !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: 
+  serial: 6
+  moved: true
+  orientation: -1
+- !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *46
+  serial: 7
+  moved: false
+  orientation: -1
+- !ruby/object:Pawn
+  depth: 0
+  color: black
+  game: *1
+  coordinates: *47
+  serial: 8
+  moved: false
+  orientation: -1
+simlevels:
+- &108 !ruby/object:Boardstate
+  game: *1
+  board: &253
+  - - *48
+    - *7
+    - *49
+    - *50
+    - *51
+    - *19
+    - *18
+    - *52
+  - - *53
+    - *54
+    - *55
+    - *56
+    - *57
+    - *58
+    - *59
+    - *60
+  - - *61
+    - *62
+    - *63
+    - *64
+    - *65
+    - *66
+    - *67
+    - *68
+  - - *69
+    - *70
+    - *71
+    - *72
+    - *73
+    - *74
+    - *75
+    - *76
+  - - *77
+    - *78
+    - *79
+    - *80
+    - *81
+    - *82
+    - *83
+    - *84
+  - - *85
+    - *86
+    - *87
+    - *88
+    - *89
+    - *90
+    - *91
+    - *92
+  - - *93
+    - *94
+    - *95
+    - *96
+    - *97
+    - *98
+    - *99
+    - *100
+  - - *101
+    - *31
+    - *102
+    - *103
+    - *104
+    - *41
+    - *40
+    - *105
+  tiles: *17
+  pieces: *106
+  depth: 0
+  turn_counter: 17
+  fifty_move_counter: 0
+  game_over: false
+  movelist:
+  - !ruby/object:Move
+    game: *1
+    departure: *48
+    piece: *4
+    team: *107
+    simlevel: *108
+    destination: *53
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *48
+    piece: *4
+    team: *107
+    simlevel: *108
+    destination: *61
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *48
+    piece: *4
+    team: *107
+    simlevel: *108
+    destination: *69
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *48
+    piece: *4
+    team: *107
+    simlevel: *108
+    destination: *77
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *48
+    piece: *4
+    team: *107
+    simlevel: *108
+    destination: *85
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *48
+    piece: *4
+    team: *107
+    simlevel: *108
+    destination: *93
+    taken: *110
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *7
+    piece: *111
+    team: *107
+    simlevel: *108
+    destination: *56
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *7
+    piece: *111
+    team: *107
+    simlevel: *108
+    destination: *61
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *49
+    piece: *112
+    team: *107
+    simlevel: *108
+    destination: *56
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *49
+    piece: *112
+    team: *107
+    simlevel: *108
+    destination: *65
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *49
+    piece: *112
+    team: *107
+    simlevel: *108
+    destination: *74
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *49
+    piece: *112
+    team: *107
+    simlevel: *108
+    destination: *83
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *49
+    piece: *112
+    team: *107
+    simlevel: *108
+    destination: *92
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *56
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *64
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *72
+    taken: *114
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *55
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *62
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *69
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *57
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *66
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *75
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *50
+    piece: *113
+    team: *107
+    simlevel: *108
+    destination: *84
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *51
+    piece: *12
+    team: *107
+    simlevel: *108
+    destination: *56
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *51
+    piece: *12
+    team: *107
+    simlevel: *108
+    destination: *57
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *19
+    piece: *115
+    team: *107
+    simlevel: *108
+    destination: *57
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *19
+    piece: *115
+    team: *107
+    simlevel: *108
+    destination: *64
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *19
+    piece: *115
+    team: *107
+    simlevel: *108
+    destination: *71
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *19
+    piece: *115
+    team: *107
+    simlevel: *108
+    destination: *78
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *19
+    piece: *115
+    team: *107
+    simlevel: *108
+    destination: *85
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *18
+    piece: *116
+    team: *107
+    simlevel: *108
+    destination: *57
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *18
+    piece: *116
+    team: *107
+    simlevel: *108
+    destination: *66
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *18
+    piece: *116
+    team: *107
+    simlevel: *108
+    destination: *68
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *95
+    piece: *117
+    team: *107
+    simlevel: *108
+    destination: *103
+    taken: *118
+    enemy: *109
+    turn: 17
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *95
+    piece: *117
+    team: *107
+    simlevel: *108
+    destination: *31
+    taken: *119
+    enemy: *109
+    turn: 17
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *54
+    piece: *120
+    team: *107
+    simlevel: *108
+    destination: *62
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *54
+    piece: *120
+    team: *107
+    simlevel: *108
+    destination: *70
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *63
+    piece: *121
+    team: *107
+    simlevel: *108
+    destination: *71
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *63
+    piece: *121
+    team: *107
+    simlevel: *108
+    destination: *72
+    taken: *114
+    enemy: *109
+    turn: 17
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *79
+    piece: *122
+    team: *107
+    simlevel: *108
+    destination: *87
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *82
+    piece: *123
+    team: *107
+    simlevel: *108
+    destination: *90
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *58
+    piece: *124
+    team: *107
+    simlevel: *108
+    destination: *66
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *58
+    piece: *124
+    team: *107
+    simlevel: *108
+    destination: *74
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *59
+    piece: *125
+    team: *107
+    simlevel: *108
+    destination: *67
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *59
+    piece: *125
+    team: *107
+    simlevel: *108
+    destination: *75
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *60
+    piece: *126
+    team: *107
+    simlevel: *108
+    destination: *68
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *60
+    piece: *126
+    team: *107
+    simlevel: *108
+    destination: *76
+    taken: 
+    enemy: *109
+    turn: 17
+    first_move: false
+  moving_team: *107
+- &230 !ruby/object:Simlevel
+  game: *1
+  depth: -1
+  board:
+  - - &163 !ruby/object:Tile
+      coordinates: *5
+      depth: -1
+      game: *1
+    - &164 !ruby/object:Tile
+      coordinates: *9
+      depth: -1
+      game: *1
+    - &165 !ruby/object:Tile
+      coordinates: *10
+      depth: -1
+      game: *1
+    - &166 !ruby/object:Tile
+      coordinates: *11
+      depth: -1
+      game: *1
+    - &167 !ruby/object:Tile
+      coordinates: *6
+      depth: -1
+      game: *1
+    - &168 !ruby/object:Tile
+      coordinates: *13
+      depth: -1
+      game: *1
+    - &169 !ruby/object:Tile
+      coordinates: *14
+      depth: -1
+      game: *1
+    - &170 !ruby/object:Tile
+      coordinates: *15
+      depth: -1
+      game: *1
+  - - &171 !ruby/object:Tile
+      coordinates: *127
+      depth: -1
+      game: *1
+    - &172 !ruby/object:Tile
+      coordinates: *22
+      depth: -1
+      game: *1
+    - &173 !ruby/object:Tile
+      coordinates: *128
+      depth: -1
+      game: *1
+    - &174 !ruby/object:Tile
+      coordinates: *129
+      depth: -1
+      game: *1
+    - &175 !ruby/object:Tile
+      coordinates: *130
+      depth: -1
+      game: *1
+    - &176 !ruby/object:Tile
+      coordinates: *26
+      depth: -1
+      game: *1
+    - &177 !ruby/object:Tile
+      coordinates: *27
+      depth: -1
+      game: *1
+    - &178 !ruby/object:Tile
+      coordinates: *28
+      depth: -1
+      game: *1
+  - - &179 !ruby/object:Tile
+      coordinates: *131
+      depth: -1
+      game: *1
+    - &180 !ruby/object:Tile
+      coordinates: *132
+      depth: -1
+      game: *1
+    - &181 !ruby/object:Tile
+      coordinates: *23
+      depth: -1
+      game: *1
+    - &182 !ruby/object:Tile
+      coordinates: *133
+      depth: -1
+      game: *1
+    - &183 !ruby/object:Tile
+      coordinates: *134
+      depth: -1
+      game: *1
+    - &184 !ruby/object:Tile
+      coordinates: *135
+      depth: -1
+      game: *1
+    - &185 !ruby/object:Tile
+      coordinates: *136
+      depth: -1
+      game: *1
+    - &186 !ruby/object:Tile
+      coordinates: *137
+      depth: -1
+      game: *1
+  - - &187 !ruby/object:Tile
+      coordinates: *138
+      depth: -1
+      game: *1
+    - &188 !ruby/object:Tile
+      coordinates: *139
+      depth: -1
+      game: *1
+    - &189 !ruby/object:Tile
+      coordinates: *140
+      depth: -1
+      game: *1
+    - &190 !ruby/object:Tile
+      coordinates: *44
+      depth: -1
+      game: *1
+    - &191 !ruby/object:Tile
+      coordinates: *141
+      depth: -1
+      game: *1
+    - &192 !ruby/object:Tile
+      coordinates: *142
+      depth: -1
+      game: *1
+    - &193 !ruby/object:Tile
+      coordinates: *143
+      depth: -1
+      game: *1
+    - &194 !ruby/object:Tile
+      coordinates: *144
+      depth: -1
+      game: *1
+  - - &195 !ruby/object:Tile
+      coordinates: *145
+      depth: -1
+      game: *1
+    - &196 !ruby/object:Tile
+      coordinates: *146
+      depth: -1
+      game: *1
+    - &197 !ruby/object:Tile
+      coordinates: *24
+      depth: -1
+      game: *1
+    - &198 !ruby/object:Tile
+      coordinates: *147
+      depth: -1
+      game: *1
+    - &199 !ruby/object:Tile
+      coordinates: *148
+      depth: -1
+      game: *1
+    - &200 !ruby/object:Tile
+      coordinates: *25
+      depth: -1
+      game: *1
+    - &201 !ruby/object:Tile
+      coordinates: *149
+      depth: -1
+      game: *1
+    - &202 !ruby/object:Tile
+      coordinates: *150
+      depth: -1
+      game: *1
+  - - &203 !ruby/object:Tile
+      coordinates: *151
+      depth: -1
+      game: *1
+    - &204 !ruby/object:Tile
+      coordinates: *152
+      depth: -1
+      game: *1
+    - &205 !ruby/object:Tile
+      coordinates: *153
+      depth: -1
+      game: *1
+    - &206 !ruby/object:Tile
+      coordinates: *154
+      depth: -1
+      game: *1
+    - &207 !ruby/object:Tile
+      coordinates: *155
+      depth: -1
+      game: *1
+    - &208 !ruby/object:Tile
+      coordinates: *156
+      depth: -1
+      game: *1
+    - &209 !ruby/object:Tile
+      coordinates: *157
+      depth: -1
+      game: *1
+    - &210 !ruby/object:Tile
+      coordinates: *158
+      depth: -1
+      game: *1
+  - - &211 !ruby/object:Tile
+      coordinates: *43
+      depth: -1
+      game: *1
+    - &212 !ruby/object:Tile
+      coordinates: *159
+      depth: -1
+      game: *1
+    - &213 !ruby/object:Tile
+      coordinates: *21
+      depth: -1
+      game: *1
+    - &214 !ruby/object:Tile
+      coordinates: *160
+      depth: -1
+      game: *1
+    - &215 !ruby/object:Tile
+      coordinates: *45
+      depth: -1
+      game: *1
+    - &216 !ruby/object:Tile
+      coordinates: *161
+      depth: -1
+      game: *1
+    - &217 !ruby/object:Tile
+      coordinates: *46
+      depth: -1
+      game: *1
+    - &218 !ruby/object:Tile
+      coordinates: *47
+      depth: -1
+      game: *1
+  - - &219 !ruby/object:Tile
+      coordinates: *29
+      depth: -1
+      game: *1
+    - &220 !ruby/object:Tile
+      coordinates: *33
+      depth: -1
+      game: *1
+    - &221 !ruby/object:Tile
+      coordinates: *34
+      depth: -1
+      game: *1
+    - &222 !ruby/object:Tile
+      coordinates: *35
+      depth: -1
+      game: *1
+    - &223 !ruby/object:Tile
+      coordinates: *162
+      depth: -1
+      game: *1
+    - &224 !ruby/object:Tile
+      coordinates: *36
+      depth: -1
+      game: *1
+    - &225 !ruby/object:Tile
+      coordinates: *37
+      depth: -1
+      game: *1
+    - &226 !ruby/object:Tile
+      coordinates: *38
+      depth: -1
+      game: *1
+  pieces:
+  - !ruby/object:Rook
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *127
+    serial: 1
+    moved: true
+  - !ruby/object:Knight
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *9
+    serial: 1
+    moved: false
+  - &238 !ruby/object:Bishop
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *10
+    serial: 1
+    moved: false
+  - !ruby/object:Queen
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *11
+    serial: 1
+    moved: false
+  - &227 !ruby/object:King
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *6
+    serial: 1
+    moved: false
+  - !ruby/object:Bishop
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *13
+    serial: 2
+    moved: false
+  - !ruby/object:Knight
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *14
+    serial: 2
+    moved: false
+  - !ruby/object:Rook
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *15
+    serial: 2
+    moved: false
+  - !ruby/object:Rook
+    depth: -1
+    color: white
+    game: *1
+    coordinates: 
+    serial: 1
+    moved: true
+  - !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *22
+    serial: 2
+    moved: false
+    orientation: 1
+  - &234 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *26
+    serial: 6
+    moved: false
+    orientation: 1
+  - &231 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *27
+    serial: 7
+    moved: false
+    orientation: 1
+  - &233 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *28
+    serial: 8
+    moved: false
+    orientation: 1
+  - &232 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *23
+    serial: 3
+    moved: true
+    orientation: 1
+  - &229 !ruby/object:Queen
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *136
+    serial: 1
+    moved: true
+  - !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *140
+    serial: 3
+    moved: true
+    orientation: -1
+  - &235 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *44
+    serial: 4
+    moved: true
+    orientation: -1
+  - &236 !ruby/object:Queen
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *142
+    serial: 1
+    moved: true
+  - &239 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *145
+    serial: 1
+    moved: true
+    orientation: -1
+  - &244 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *24
+    serial: 4
+    moved: true
+    orientation: 1
+  - &240 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *148
+    serial: 5
+    moved: true
+    orientation: -1
+  - &237 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *25
+    serial: 5
+    moved: true
+    orientation: 1
+  - &241 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *149
+    serial: 7
+    moved: true
+    orientation: -1
+  - &242 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *150
+    serial: 8
+    moved: true
+    orientation: -1
+  - !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *151
+    serial: 1
+    moved: true
+    orientation: -1
+  - &245 !ruby/object:Pawn
+    depth: -1
+    color: white
+    game: *1
+    coordinates: *152
+    serial: 1
+    moved: true
+    orientation: 1
+  - &243 !ruby/object:Queen
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *153
+    serial: 1
+    moved: true
+  - &246 !ruby/object:Queen
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *154
+    serial: 1
+    moved: true
+  - &247 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *155
+    serial: 5
+    moved: true
+    orientation: -1
+  - &248 !ruby/object:Knight
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *156
+    serial: 2
+    moved: true
+  - &249 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *157
+    serial: 7
+    moved: true
+    orientation: -1
+  - !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *158
+    serial: 8
+    moved: true
+    orientation: -1
+  - &250 !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *43
+    serial: 1
+    moved: false
+    orientation: -1
+  - &251 !ruby/object:Queen
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *159
+    serial: 1
+    moved: true
+  - &252 !ruby/object:Queen
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *21
+    serial: 1
+    moved: true
+  - &228 !ruby/object:King
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *160
+    serial: 1
+    moved: true
+  - !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *45
+    serial: 5
+    moved: false
+    orientation: -1
+  - !ruby/object:King
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *161
+    serial: 1
+    moved: true
+  - !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *46
+    serial: 7
+    moved: false
+    orientation: -1
+  - !ruby/object:Pawn
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *47
+    serial: 8
+    moved: false
+    orientation: -1
+  - !ruby/object:Rook
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *29
+    serial: 1
+    moved: false
+  - !ruby/object:Knight
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *33
+    serial: 1
+    moved: false
+  - !ruby/object:Bishop
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *34
+    serial: 1
+    moved: false
+  - !ruby/object:King
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *35
+    serial: 1
+    moved: true
+  - !ruby/object:King
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *162
+    serial: 1
+    moved: true
+  - !ruby/object:Bishop
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *36
+    serial: 2
+    moved: false
+  - !ruby/object:Knight
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *37
+    serial: 2
+    moved: false
+  - !ruby/object:Rook
+    depth: -1
+    color: black
+    game: *1
+    coordinates: *38
+    serial: 2
+    moved: false
+  tiles:
+  - *163
+  - *164
+  - *165
+  - *166
+  - *167
+  - *168
+  - *169
+  - *170
+  - *171
+  - *172
+  - *173
+  - *174
+  - *175
+  - *176
+  - *177
+  - *178
+  - *179
+  - *180
+  - *181
+  - *182
+  - *183
+  - *184
+  - *185
+  - *186
+  - *187
+  - *188
+  - *189
+  - *190
+  - *191
+  - *192
+  - *193
+  - *194
+  - *195
+  - *196
+  - *197
+  - *198
+  - *199
+  - *200
+  - *201
+  - *202
+  - *203
+  - *204
+  - *205
+  - *206
+  - *207
+  - *208
+  - *209
+  - *210
+  - *211
+  - *212
+  - *213
+  - *214
+  - *215
+  - *216
+  - *217
+  - *218
+  - *219
+  - *220
+  - *221
+  - *222
+  - *223
+  - *224
+  - *225
+  - *226
+  moving_team: *109
+  white_king: *227
+  black_king: *228
+  turn_counter: 16
+  fifty_move_counter: 0
+  game_over: false
+  movelist:
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *193
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *186
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *177
+    taken: *231
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *184
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *183
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *182
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *181
+    taken: *232
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *194
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *178
+    taken: *233
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *185
+    piece: *229
+    team: *109
+    simlevel: *230
+    destination: *176
+    taken: *234
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *190
+    piece: *235
+    team: *109
+    simlevel: *230
+    destination: *182
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *190
+    piece: *235
+    team: *109
+    simlevel: *230
+    destination: *181
+    taken: *232
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *200
+    taken: *237
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *193
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *194
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *184
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *176
+    taken: *234
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *191
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *183
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *174
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *192
+    piece: *236
+    team: *109
+    simlevel: *230
+    destination: *165
+    taken: *238
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *195
+    piece: *239
+    team: *109
+    simlevel: *230
+    destination: *187
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *199
+    piece: *240
+    team: *109
+    simlevel: *230
+    destination: *191
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *201
+    piece: *241
+    team: *109
+    simlevel: *230
+    destination: *193
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *202
+    piece: *242
+    team: *109
+    simlevel: *230
+    destination: *194
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *197
+    taken: *244
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *204
+    taken: *245
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *198
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *191
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *184
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *177
+    taken: *231
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *196
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *205
+    piece: *243
+    team: *109
+    simlevel: *230
+    destination: *187
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *206
+    piece: *246
+    team: *109
+    simlevel: *230
+    destination: *198
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *206
+    piece: *246
+    team: *109
+    simlevel: *230
+    destination: *197
+    taken: *244
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *207
+    piece: *247
+    team: *109
+    simlevel: *230
+    destination: *200
+    taken: *237
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *208
+    piece: *248
+    team: *109
+    simlevel: *230
+    destination: *191
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *208
+    piece: *248
+    team: *109
+    simlevel: *230
+    destination: *193
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *208
+    piece: *248
+    team: *109
+    simlevel: *230
+    destination: *198
+    taken: 
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *209
+    piece: *249
+    team: *109
+    simlevel: *230
+    destination: *200
+    taken: *237
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *211
+    piece: *250
+    team: *109
+    simlevel: *230
+    destination: *204
+    taken: *245
+    enemy: *107
+    turn: 16
+    first_move: false
+  - !ruby/object:Move
+    game: *1
+    departure: *212
+    piece: *251
+    team: *109
+    simlevel: *230
+    destination: *204
+    taken: *245
+    enemy: *107
+    turn: 16
+    first_move: true
+  - !ruby/object:Move
+    game: *1
+    departure: *213
+    piece: *252
+    team: *109
+    simlevel: *230
+    destination: *204
+    taken: *245
+    enemy: *107
+    turn: 16
+    first_move: true
+- !ruby/object:Simlevel
+  game: *1
+  depth: -2
+  board:
+  - []
+  pieces: []
+  tiles: []
+  moving_team: *107
+  white_king: 
+  black_king: 
+  turn_counter: 0
+  fifty_move_counter: 0
+  game_over: false
+  movelist: []
+boardstate: *108
+board: *253
+tiles:
+- *48
+- *7
+- *49
+- *50
+- *51
+- *19
+- *18
+- *52
+- *53
+- *54
+- *55
+- *56
+- *57
+- *58
+- *59
+- *60
+- *61
+- *62
+- *63
+- *64
+- *65
+- *66
+- *67
+- *68
+- *69
+- *70
+- *71
+- *72
+- *73
+- *74
+- *75
+- *76
+- *77
+- *78
+- *79
+- *80
+- *81
+- *82
+- *83
+- *84
+- *85
+- *86
+- *87
+- *88
+- *89
+- *90
+- *91
+- *92
+- *93
+- *94
+- *95
+- *96
+- *97
+- *98
+- *99
+- *100
+- *101
+- *31
+- *102
+- *103
+- *104
+- *41
+- *40
+- *105
+player_names:
+- AI
+- ALEX
+players:
+- *3
+- *2
+name: AI_vs_ALEX_2017-05-24_22-30-56_-0500
+saved: true
+history:
+- &254 !ruby/object:Move
+  game: *1
+  departure: *53
+  piece: *117
+  team: *107
+  simlevel: *108
+  destination: *69
+  taken: 
+  enemy: *109
+  turn: 0
+  first_move: false
+  ally_check_cache: false
+  previous_turn: 
+  enemy_check_cache: false
+  snapshot: !ruby/object:Snapshot
+    team_to_move: *109
+    move: *254
+    turn_counter: 1
+    fossils:
+      white rook: *15
+      white knight: *14
+      white bishop: *13
+      white queen: *11
+      white king: *6
+      white pawn: *138
+      black pawn: *47
+      black rook: *38
+      black knight: *37
+      black bishop: *36
+      black queen: *35
+      black king: *162
+    special_move_opportunities:
+    - *69
+  following_turn: &256 !ruby/object:Move
+    game: *1
+    departure: *98
+    piece: *255
+    team: *109
+    simlevel: *108
+    destination: *82
+    taken: 
+    enemy: *107
+    turn: 1
+    first_move: false
+    ally_check_cache: false
+    previous_turn: *254
+    enemy_check_cache: false
+    snapshot: !ruby/object:Snapshot
+      team_to_move: *107
+      move: *256
+      turn_counter: 2
+      fossils:
+        white rook: *15
+        white knight: *14
+        white bishop: *13
+        white queen: *11
+        white king: *6
+        white pawn: *138
+        black pawn: *47
+        black rook: *38
+        black knight: *37
+        black bishop: *36
+        black queen: *35
+        black king: *162
+      special_move_opportunities:
+      - *82
+    following_turn: &257 !ruby/object:Move
+      game: *1
+      departure: *57
+      piece: *123
+      team: *107
+      simlevel: *108
+      destination: *73
+      taken: 
+      enemy: *109
+      turn: 2
+      first_move: false
+      ally_check_cache: false
+      previous_turn: *256
+      enemy_check_cache: false
+      snapshot: !ruby/object:Snapshot
+        team_to_move: *109
+        move: *257
+        turn_counter: 3
+        fossils:
+          white rook: *15
+          white knight: *14
+          white bishop: *13
+          white queen: *11
+          white king: *6
+          white pawn: *141
+          black pawn: *47
+          black rook: *38
+          black knight: *37
+          black bishop: *36
+          black queen: *35
+          black king: *162
+        special_move_opportunities:
+        - *73
+      following_turn: &259 !ruby/object:Move
+        game: *1
+        departure: *95
+        piece: *258
+        team: *109
+        simlevel: *108
+        destination: *79
+        taken: 
+        enemy: *107
+        turn: 3
+        first_move: false
+        ally_check_cache: false
+        previous_turn: *257
+        enemy_check_cache: false
+        snapshot: !ruby/object:Snapshot
+          team_to_move: *107
+          move: *259
+          turn_counter: 4
+          fossils:
+            white rook: *15
+            white knight: *14
+            white bishop: *13
+            white queen: *11
+            white king: *6
+            white pawn: *141
+            black pawn: *47
+            black rook: *38
+            black knight: *37
+            black bishop: *36
+            black queen: *35
+            black king: *162
+          special_move_opportunities:
+          - *79
+        following_turn: &260 !ruby/object:Move
+          game: *1
+          departure: *73
+          piece: *123
+          team: *107
+          simlevel: *108
+          destination: *82
+          taken: *255
+          enemy: *109
+          turn: 4
+          first_move: true
+          ally_check_cache: false
+          previous_turn: *259
+          enemy_check_cache: false
+          snapshot: !ruby/object:Snapshot
+            team_to_move: *109
+            move: *260
+            turn_counter: 5
+            fossils:
+              white rook: *15
+              white knight: *14
+              white bishop: *13
+              white queen: *11
+              white king: *6
+              white pawn: *25
+              black pawn: *47
+              black rook: *38
+              black knight: *37
+              black bishop: *36
+              black queen: *35
+              black king: *162
+            special_move_opportunities: []
+          following_turn: &261 !ruby/object:Move
+            game: *1
+            departure: *96
+            piece: *114
+            team: *109
+            simlevel: *108
+            destination: *80
+            taken: 
+            enemy: *107
+            turn: 5
+            first_move: false
+            ally_check_cache: false
+            previous_turn: *260
+            enemy_check_cache: false
+            snapshot: !ruby/object:Snapshot
+              team_to_move: *107
+              move: *261
+              turn_counter: 6
+              fossils:
+                white rook: *15
+                white knight: *14
+                white bishop: *13
+                white queen: *11
+                white king: *6
+                white pawn: *25
+                black pawn: *47
+                black rook: *38
+                black knight: *37
+                black bishop: *36
+                black queen: *35
+                black king: *162
+              special_move_opportunities:
+              - *80
+            following_turn: &262 !ruby/object:Move
+              game: *1
+              departure: *55
+              piece: *121
+              team: *107
+              simlevel: *108
+              destination: *63
+              taken: 
+              enemy: *109
+              turn: 6
+              first_move: false
+              ally_check_cache: false
+              previous_turn: *261
+              enemy_check_cache: false
+              snapshot: !ruby/object:Snapshot
+                team_to_move: *109
+                move: *262
+                turn_counter: 7
+                fossils:
+                  white rook: *15
+                  white knight: *14
+                  white bishop: *13
+                  white queen: *11
+                  white king: *6
+                  white pawn: *25
+                  black pawn: *47
+                  black rook: *38
+                  black knight: *37
+                  black bishop: *36
+                  black queen: *35
+                  black king: *162
+                special_move_opportunities: []
+              following_turn: &264 !ruby/object:Move
+                game: *1
+                departure: *103
+                piece: *263
+                team: *109
+                simlevel: *108
+                destination: *96
+                taken: 
+                enemy: *107
+                turn: 7
+                first_move: false
+                ally_check_cache: false
+                previous_turn: *262
+                enemy_check_cache: false
+                snapshot: !ruby/object:Snapshot
+                  team_to_move: *107
+                  move: *264
+                  turn_counter: 8
+                  fossils:
+                    white rook: *15
+                    white knight: *14
+                    white bishop: *13
+                    white queen: *11
+                    white king: *6
+                    white pawn: *25
+                    black pawn: *47
+                    black queen: *160
+                    black rook: *38
+                    black knight: *37
+                    black bishop: *36
+                    black king: *162
+                  special_move_opportunities: []
+                following_turn: &265 !ruby/object:Move
+                  game: *1
+                  departure: *56
+                  piece: *122
+                  team: *107
+                  simlevel: *108
+                  destination: *72
+                  taken: 
+                  enemy: *109
+                  turn: 8
+                  first_move: false
+                  ally_check_cache: false
+                  previous_turn: *264
+                  enemy_check_cache: false
+                  snapshot: !ruby/object:Snapshot
+                    team_to_move: *109
+                    move: *265
+                    turn_counter: 9
+                    fossils:
+                      white rook: *15
+                      white knight: *14
+                      white bishop: *13
+                      white queen: *11
+                      white king: *6
+                      white pawn: *25
+                      black pawn: *47
+                      black queen: *160
+                      black rook: *38
+                      black knight: *37
+                      black bishop: *36
+                      black king: *162
+                    special_move_opportunities:
+                    - *72
+                  following_turn: &267 !ruby/object:Move
+                    game: *1
+                    departure: *94
+                    piece: *266
+                    team: *109
+                    simlevel: *108
+                    destination: *78
+                    taken: 
+                    enemy: *107
+                    turn: 9
+                    first_move: false
+                    ally_check_cache: false
+                    previous_turn: *265
+                    enemy_check_cache: false
+                    snapshot: !ruby/object:Snapshot
+                      team_to_move: *107
+                      move: *267
+                      turn_counter: 10
+                      fossils:
+                        white rook: *15
+                        white knight: *14
+                        white bishop: *13
+                        white queen: *11
+                        white king: *6
+                        white pawn: *25
+                        black pawn: *47
+                        black queen: *160
+                        black rook: *38
+                        black knight: *37
+                        black bishop: *36
+                        black king: *162
+                      special_move_opportunities:
+                      - *78
+                    following_turn: &268 !ruby/object:Move
+                      game: *1
+                      departure: *69
+                      piece: *117
+                      team: *107
+                      simlevel: *108
+                      destination: *78
+                      taken: *266
+                      enemy: *109
+                      turn: 10
+                      first_move: true
+                      ally_check_cache: false
+                      previous_turn: *267
+                      enemy_check_cache: false
+                      snapshot: !ruby/object:Snapshot
+                        team_to_move: *109
+                        move: *268
+                        turn_counter: 11
+                        fossils:
+                          white rook: *15
+                          white knight: *14
+                          white bishop: *13
+                          white queen: *11
+                          white king: *6
+                          white pawn: *25
+                          black pawn: *47
+                          black queen: *160
+                          black rook: *38
+                          black knight: *37
+                          black bishop: *36
+                          black king: *162
+                        special_move_opportunities: []
+                      following_turn: &269 !ruby/object:Move
+                        game: *1
+                        departure: *104
+                        piece: *118
+                        team: *109
+                        simlevel: *108
+                        destination: *103
+                        taken: 
+                        enemy: *107
+                        turn: 11
+                        first_move: false
+                        ally_check_cache: false
+                        previous_turn: *268
+                        enemy_check_cache: false
+                        snapshot: !ruby/object:Snapshot
+                          team_to_move: *107
+                          move: *269
+                          turn_counter: 12
+                          fossils:
+                            white rook: *15
+                            white knight: *14
+                            white bishop: *13
+                            white queen: *11
+                            white king: *6
+                            white pawn: *25
+                            black pawn: *47
+                            black queen: *160
+                            black rook: *38
+                            black knight: *37
+                            black bishop: *36
+                            black king: *35
+                          special_move_opportunities: []
+                        following_turn: &270 !ruby/object:Move
+                          game: *1
+                          departure: *72
+                          piece: *122
+                          team: *107
+                          simlevel: *108
+                          destination: *79
+                          taken: *258
+                          enemy: *109
+                          turn: 12
+                          first_move: true
+                          ally_check_cache: false
+                          previous_turn: *269
+                          enemy_check_cache: false
+                          snapshot: !ruby/object:Snapshot
+                            team_to_move: *109
+                            move: *270
+                            turn_counter: 13
+                            fossils:
+                              white rook: *15
+                              white knight: *14
+                              white bishop: *13
+                              white queen: *11
+                              white king: *6
+                              white pawn: *25
+                              black pawn: *47
+                              black queen: *160
+                              black rook: *38
+                              black knight: *37
+                              black bishop: *36
+                              black king: *35
+                            special_move_opportunities: []
+                          following_turn: &271 !ruby/object:Move
+                            game: *1
+                            departure: *96
+                            piece: *263
+                            team: *109
+                            simlevel: *108
+                            destination: *95
+                            taken: 
+                            enemy: *107
+                            turn: 13
+                            first_move: true
+                            ally_check_cache: false
+                            previous_turn: *270
+                            enemy_check_cache: false
+                            snapshot: !ruby/object:Snapshot
+                              team_to_move: *107
+                              move: *271
+                              turn_counter: 14
+                              fossils:
+                                white rook: *15
+                                white knight: *14
+                                white bishop: *13
+                                white queen: *11
+                                white king: *6
+                                white pawn: *25
+                                black pawn: *47
+                                black queen: *21
+                                black rook: *38
+                                black knight: *37
+                                black bishop: *36
+                                black king: *35
+                              special_move_opportunities: []
+                            following_turn: &272 !ruby/object:Move
+                              game: *1
+                              departure: *78
+                              piece: *117
+                              team: *107
+                              simlevel: *108
+                              destination: *86
+                              taken: 
+                              enemy: *109
+                              turn: 14
+                              first_move: true
+                              ally_check_cache: false
+                              previous_turn: *271
+                              enemy_check_cache: false
+                              snapshot: !ruby/object:Snapshot
+                                team_to_move: *109
+                                move: *272
+                                turn_counter: 15
+                                fossils:
+                                  white rook: *15
+                                  white knight: *14
+                                  white bishop: *13
+                                  white queen: *11
+                                  white king: *6
+                                  white pawn: *152
+                                  black pawn: *47
+                                  black queen: *21
+                                  black rook: *38
+                                  black knight: *37
+                                  black bishop: *36
+                                  black king: *35
+                                special_move_opportunities: []
+                              following_turn: &273 !ruby/object:Move
+                                game: *1
+                                departure: *80
+                                piece: *114
+                                team: *109
+                                simlevel: *108
+                                destination: *72
+                                taken: 
+                                enemy: *107
+                                turn: 15
+                                first_move: true
+                                ally_check_cache: false
+                                previous_turn: *272
+                                enemy_check_cache: false
+                                snapshot: !ruby/object:Snapshot
+                                  team_to_move: *107
+                                  move: *273
+                                  turn_counter: 16
+                                  fossils:
+                                    white rook: *15
+                                    white knight: *14
+                                    white bishop: *13
+                                    white queen: *11
+                                    white king: *6
+                                    white pawn: *152
+                                    black pawn: *47
+                                    black queen: *21
+                                    black rook: *38
+                                    black knight: *37
+                                    black bishop: *36
+                                    black king: *35
+                                  special_move_opportunities: []
+                                following_turn: &274 !ruby/object:Move
+                                  game: *1
+                                  departure: *86
+                                  piece: *117
+                                  team: *107
+                                  simlevel: *108
+                                  destination: *95
+                                  taken: *263
+                                  enemy: *109
+                                  turn: 16
+                                  first_move: true
+                                  ally_check_cache: false
+                                  previous_turn: *273
+                                  enemy_check_cache: false
+                                  snapshot: !ruby/object:Snapshot
+                                    team_to_move: *107
+                                    move: *274
+                                    turn_counter: 17
+                                    fossils:
+                                      white rook: *15
+                                      white knight: *14
+                                      white bishop: *13
+                                      white queen: *11
+                                      white king: *6
+                                      white pawn: *21
+                                      black pawn: *47
+                                      black rook: *38
+                                      black knight: *37
+                                      black bishop: *36
+                                      black king: *35
+                                    special_move_opportunities: []
+- *256
+- *257
+- *259
+- *260
+- *261
+- *262
+- *264
+- *265
+- *267
+- *268
+- *269
+- *270
+- *271
+- *272
+- *273
+- *274
+winner: *3
+last_save_path: "/home/alex/Desktop/Ruby/Chess/SaveData/Games/Finished/AI_vs_ALEX_2017-05-24_22-30-56_-0500.yaml"
+ended: 2017-05-25 15:05:36.490787474 -05:00
+game_over_cause: stalemate
+final_move: *274
