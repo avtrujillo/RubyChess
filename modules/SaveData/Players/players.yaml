@@ -1,0 +1,9 @@
+---
+- !ruby/object:Player
+  color: black
+  name: AI
+  games: []
+- !ruby/object:Player
+  color: white
+  name: ALEX
+  games: []

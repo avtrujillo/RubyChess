@@ -1,6 +1,6 @@
 # the word "bug" in comments will be used to flag unfixed bugs
 
-$needs_testing = false #used for debugging
+$rubychess_dir = __dir__
 
 $neg_display = true # controls whether or not to invert the black and white colors in the display
 
@@ -76,16 +76,6 @@ them as they are never displayed. Tile arrays exists as an
 attribute of both the main boardstate and all simlevels.
 
 =end
-
-def test_protocol(movelist) #debugging tool
-	movelist.each do |move| #delete later
-		if move.destination == "castle"
-			puts move.piece.name + " " + move.departure.coordinates.name + " castle"
-		else
-			puts move.piece.name + " " + move.departure.coordinates.name + " to " + move.destination.coordinates.name
-		end
-	end
-end
 
 
 

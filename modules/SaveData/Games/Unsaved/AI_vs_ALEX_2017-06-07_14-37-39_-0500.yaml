@@ -25290,7 +25290,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2711
 - &2712 !ruby/object:Knight
   depth: 0
@@ -25316,7 +25316,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2712
 - &2713 !ruby/object:Bishop
   depth: 0
@@ -25342,7 +25342,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2713
 - &2714 !ruby/object:Queen
   depth: 0
@@ -25368,7 +25368,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2714
 - &2715 !ruby/object:King
   depth: 0
@@ -25394,7 +25394,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2715
 - &2716 !ruby/object:Bishop
   depth: 0
@@ -25420,7 +25420,7 @@ pieces: &2839
     serial: 2
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2716
 - &2717 !ruby/object:Knight
   depth: 0
@@ -25446,7 +25446,7 @@ pieces: &2839
     serial: 2
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2717
 - &2718 !ruby/object:Rook
   depth: 0
@@ -25472,7 +25472,7 @@ pieces: &2839
     serial: 2
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2718
 - &2719 !ruby/object:Pawn
   depth: 0
@@ -25500,7 +25500,7 @@ pieces: &2839
     moved: true
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2719
 - &2720 !ruby/object:Pawn
   depth: 0
@@ -25528,7 +25528,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2720
 - &2721 !ruby/object:Pawn
   depth: 0
@@ -25556,7 +25556,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2721
 - &2722 !ruby/object:Pawn
   depth: 0
@@ -25584,7 +25584,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2722
 - &2723 !ruby/object:Pawn
   depth: 0
@@ -25612,7 +25612,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2723
 - &2724 !ruby/object:Pawn
   depth: 0
@@ -25640,7 +25640,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2724
 - &2725 !ruby/object:Pawn
   depth: 0
@@ -25668,7 +25668,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2725
 - &2726 !ruby/object:Pawn
   depth: 0
@@ -25696,7 +25696,7 @@ pieces: &2839
     moved: false
     orientation: 1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2726
 - &2727 !ruby/object:Rook
   depth: 0
@@ -25722,7 +25722,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2727
 - &2728 !ruby/object:Knight
   depth: 0
@@ -25748,7 +25748,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2728
 - &2729 !ruby/object:Bishop
   depth: 0
@@ -25774,7 +25774,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2729
 - &2730 !ruby/object:Queen
   depth: 0
@@ -25800,7 +25800,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2730
 - &2731 !ruby/object:King
   depth: 0
@@ -25826,7 +25826,7 @@ pieces: &2839
     serial: 1
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2731
 - &2732 !ruby/object:Bishop
   depth: 0
@@ -25852,7 +25852,7 @@ pieces: &2839
     serial: 2
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2732
 - &2733 !ruby/object:Knight
   depth: 0
@@ -25878,7 +25878,7 @@ pieces: &2839
     serial: 2
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2733
 - &2734 !ruby/object:Rook
   depth: 0
@@ -25904,7 +25904,7 @@ pieces: &2839
     serial: 2
     moved: false
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2734
 - &2735 !ruby/object:Pawn
   depth: 0
@@ -25932,7 +25932,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2735
 - &2736 !ruby/object:Pawn
   depth: 0
@@ -25960,7 +25960,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2736
 - &2737 !ruby/object:Pawn
   depth: 0
@@ -25988,7 +25988,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2737
 - &2738 !ruby/object:Pawn
   depth: 0
@@ -26016,7 +26016,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2738
 - &2739 !ruby/object:Pawn
   depth: 0
@@ -26044,7 +26044,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2739
 - &2740 !ruby/object:Pawn
   depth: 0
@@ -26072,7 +26072,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2740
 - &2741 !ruby/object:Pawn
   depth: 0
@@ -26100,7 +26100,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2741
 - &2742 !ruby/object:Pawn
   depth: 0
@@ -26128,7 +26128,7 @@ pieces: &2839
     moved: false
     orientation: -1
     promoted_from: 
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2742
 simlevels:
 - &2841 !ruby/object:Boardstate
@@ -27592,7 +27592,7 @@ simlevels:
     fifty_move_counter: 0
     game_over: false
     movelist: []
-    sim_id: 2017-06-07 15:59:26 -0500-120
+    sim_id: 2017-07-31 23:01:18 -0500-18
     sim_parent: *2841
 - *2971
 - !ruby/object:Simlevel
@@ -27687,4 +27687,4 @@ name: AI_vs_ALEX_2017-06-07_14-37-39_-0500
 saved: false
 history: []
 winner: 
-last_save_path: "/home/alex/Desktop/Ruby/Chess/SaveData/Games/Unsaved/AI_vs_ALEX_2017-06-07_14-37-39_-0500.yaml"
+last_save_path: "/home/alex/Desktop/Ruby/Chess/modules/SaveData/Games/Unsaved/AI_vs_ALEX_2017-06-07_14-37-39_-0500.yaml"

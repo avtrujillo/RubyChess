@@ -48,7 +48,7 @@ class MainMenu
 		end
 	end
 	def get_unsaved_game
-		unsaved_dir = __dir__ + "/SaveData/Games/Unsaved"
+		unsaved_dir = $rubychess_dir + "/SaveData/Games/Unsaved"
 		unsaved_dir_entries = Dir.entries(unsaved_dir)
 		unsaved_dir_entries.select! {|entry| entry[-5..-1] == ".yaml"}
 		raise "multiple unsaved games" if unsaved_dir_entries.count > 1

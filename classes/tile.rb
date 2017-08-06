@@ -12,20 +12,14 @@ class Tile
 		level = self.game.simlevels.find {|level| level.depth == self.depth}
 		self.game.simlevels.find {|level| level.depth == self.depth}
 	end
-	def occupied_piece(arg = nil)
+	def occupied_piece
 		if self.game
-			byebug unless (self.boardstate.pieces.uniq {|piece| piece.coordinates}) == self.boardstate.pieces
+			foo = (self.boardstate.pieces.uniq {|piece| piece.coordinates}).reject {|piece| piece.coordinates.nil?}
+			bar = self.boardstate.pieces.reject {|piece| piece.coordinates.nil?}
+			foo.each {|piece| bar.delete_at(bar.find_index(piece))}
+			byebug unless bar.empty?
 			pieces = self.boardstate.pieces.select {|piece| piece.coordinates == self.coordinates}
-			if arg
-				raise unless self.boardstate.pieces.include?(arg)
-				raise unless arg.coordinates == self.coordinates
-				unless pieces.include?(arg)
-					byebug
-				end
-			end
-			byebug "#{pieces.count.to_s}" unless pieces.count <= 1
 			piece = pieces.first
-			puts "#{self.coordinates} + #{self.boardstate.pieces.object_id}" if arg
 			piece
 		else
 			raise if arg

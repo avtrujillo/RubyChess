@@ -14,7 +14,7 @@ class Move
 		@enemy = @piece.team.opposite
 		@turn = game.boardstate.turn_counter
 		@first_move = @piece.moved
-		self.simulate_outcomes
+		self.simulate_outcome
 		# @ snapshot is taken at the END of the move
 		# @check_cache will be used to cache the results of check_detect as needed
 	end
