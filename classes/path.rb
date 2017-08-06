@@ -12,38 +12,41 @@ class Path
 		@tiles = []
 		@x_step = @piece.tile.coordinates.x_axis # what is the x- or y-coordinate
 		@y_step = @piece.tile.coordinates.y_axis # => of our current step?
-		self.fill_path
+		fill_path
 	end
+
 	def set_y_orientation
 		case @name.chars.first.upcase
 		when 'N'
-			return 1
+			1
 		when 'S'
-			return -1
+			-1
 		when 'E' || 'W'
-			return 0
+			0
 		else
 			raise 'first character of path name is invalid'
 		end
 	end
+
 	def set_x_orientation
 		case @name.chars.last.upcase
 		when 'E'
-			return 1
+			1
 		when 'W'
-			return -1
+			-1
 		when 'N' || 'S'
-			return 0
+			0
 		else
-			raise 'last character of path name is invalid'
+			raise 'second character of path name is invalid'
 		end
 	end
+
 	def take_step # in order to find our path, we keep taking steps in a given
-		self.x_step += self.x_ori # => direction (up, down, left, right, diagonal)
-		self.y_step += self.y_ori # => until we reach the end of the board
+		@x_step += @x_ori # => direction (up, down, left, right, diagonal)
+		@y_step += @y_ori # => until we reach the end of the board
 		@all_tiles.find do |tile|
-			tile.coordinates.x_axis == self.x_step &&
-			tile.coordinates.y_axis == self.y_step
+			tile.coordinates.x_axis == @x_step &&
+			tile.coordinates.y_axis == @y_step
 		end
 	end
 
@@ -53,7 +56,7 @@ class Path
 		path_tiles = []
 		loop do
 			step = take_step
-			unless step.nil?
+			if step
 				tiles << step
 			else
 				return crop_path(path_tiles)
